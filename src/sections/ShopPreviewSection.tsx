@@ -1,10 +1,12 @@
-import { useRef, useLayoutEffect, useState } from 'react';
+import { useRef, useLayoutEffect, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { products } from '@/data/products';
+import { fetchProducts } from '@/data/api';
 import { useCartStore } from '@/store/cartStore';
-import { Plus, Filter } from 'lucide-react';
+import { useWishlistStore } from '@/store/wishlistStore';
+import { Plus, Filter, Heart } from 'lucide-react';
+import type { Product } from '@/types';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -15,15 +17,33 @@ export default function ShopPreviewSection() {
   const headerRef = useRef<HTMLDivElement>(null);
   const filtersRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
-  
+
   const [activeCategory, setActiveCategory] = useState('All');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const addToCart = useCartStore((state) => state.addToCart);
+  const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
+  const isInWishlist = useWishlistStore((state) => state.isInWishlist);
+
+  // Backend-ready data fetching
+  useEffect(() => {
+    let cancelled = false;
+    fetchProducts().then((data) => {
+      if (!cancelled) {
+        setProducts(data);
+        setIsLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   const filteredProducts = activeCategory === 'All'
     ? products
     : products.filter((p) => p.category === activeCategory);
 
   useLayoutEffect(() => {
+    if (isLoading) return;
+
     const ctx = gsap.context(() => {
       // Header animation
       gsap.fromTo(
@@ -84,7 +104,7 @@ export default function ShopPreviewSection() {
     }, sectionRef);
 
     return () => ctx.revert();
-  }, [filteredProducts]);
+  }, [filteredProducts, isLoading]);
 
   return (
     <section
@@ -119,72 +139,102 @@ export default function ShopPreviewSection() {
             <button
               key={category}
               onClick={() => setActiveCategory(category)}
-              className={`px-4 py-2 text-xs uppercase tracking-wider border transition-all ${
-                activeCategory === category
+              className={`px-4 py-2 text-xs uppercase tracking-wider border transition-all ${activeCategory === category
                   ? 'border-[#D4A24F] text-[#D4A24F]'
                   : 'border-[#F4F1EA]/20 text-[#F4F1EA]/60 hover:border-[#F4F1EA]/40'
-              }`}
+                }`}
             >
               {category}
             </button>
           ))}
         </div>
 
-        {/* Product Grid */}
-        <div
-          ref={gridRef}
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-        >
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
-              className="product-card group"
-              style={{ opacity: 0 }}
-            >
-              {/* Image */}
-              <Link to={`/product/${product.id}`} className="block relative overflow-hidden aspect-square mb-4 bg-[#F4F1EA]/5">
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                {product.bestseller && (
-                  <span className="absolute top-3 left-3 px-3 py-1 bg-[#D4A24F] text-[#0B0B0D] text-xs font-semibold uppercase">
-                    Bestseller
-                  </span>
-                )}
-                {product.new && (
-                  <span className="absolute top-3 left-3 px-3 py-1 bg-[#F4F1EA] text-[#0B0B0D] text-xs font-semibold uppercase">
-                    New
-                  </span>
-                )}
-                
-                {/* Quick Add Button */}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    addToCart(product);
-                  }}
-                  className="absolute bottom-0 left-0 right-0 bg-[#D4A24F] text-[#0B0B0D] py-3 flex items-center justify-center gap-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300"
-                >
-                  <Plus className="w-4 h-4" />
-                  <span className="text-xs font-semibold uppercase tracking-wider">Add to Cart</span>
-                </button>
-              </Link>
-
-              {/* Info */}
-              <div>
-                <h3 className="text-[#F4F1EA] font-semibold text-sm mb-1 group-hover:text-[#D4A24F] transition-colors">
-                  {product.name}
-                </h3>
-                <p className="text-[#F4F1EA]/40 text-xs mb-2">{product.size}</p>
-                <p className="text-[#D4A24F] font-semibold">
-                  ₹{product.price.toLocaleString()}
-                </p>
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="aspect-square bg-[#F4F1EA]/5 mb-4" />
+                <div className="h-4 bg-[#F4F1EA]/5 w-3/4 mb-2" />
+                <div className="h-3 bg-[#F4F1EA]/5 w-1/4 mb-2" />
+                <div className="h-4 bg-[#F4F1EA]/5 w-1/3" />
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          /* Product Grid */
+          <div
+            ref={gridRef}
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+          >
+            {filteredProducts.map((product) => (
+              <div
+                key={product.id}
+                className="product-card group"
+                style={{ opacity: 0 }}
+              >
+                {/* Image */}
+                <Link to={`/product/${product.id}`} className="block relative overflow-hidden aspect-square mb-4 bg-[#F4F1EA]/5">
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  {product.bestseller && (
+                    <span className="absolute top-3 left-3 px-3 py-1 bg-[#D4A24F] text-[#0B0B0D] text-xs font-semibold uppercase">
+                      Bestseller
+                    </span>
+                  )}
+                  {product.new && (
+                    <span className="absolute top-3 left-3 px-3 py-1 bg-[#F4F1EA] text-[#0B0B0D] text-xs font-semibold uppercase">
+                      New
+                    </span>
+                  )}
+
+                  {/* Wishlist Button */}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleWishlist(product);
+                    }}
+                    className="absolute top-3 right-3 w-9 h-9 bg-[#0B0B0D]/60 backdrop-blur-sm flex items-center justify-center rounded-full hover:bg-[#0B0B0D]/80 transition-colors"
+                    aria-label={`Toggle wishlist for ${product.name}`}
+                  >
+                    <Heart
+                      className={`w-4 h-4 transition-colors ${isInWishlist(product.id)
+                          ? 'text-[#D4A24F] fill-[#D4A24F]'
+                          : 'text-[#F4F1EA]/80'
+                        }`}
+                    />
+                  </button>
+
+                  {/* Quick Add Button */}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      addToCart(product);
+                    }}
+                    className="absolute bottom-0 left-0 right-0 bg-[#D4A24F] text-[#0B0B0D] py-3 flex items-center justify-center gap-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300"
+                  >
+                    <Plus className="w-4 h-4" />
+                    <span className="text-xs font-semibold uppercase tracking-wider">Add to Cart</span>
+                  </button>
+                </Link>
+
+                {/* Info */}
+                <div>
+                  <h3 className="text-[#F4F1EA] font-semibold text-sm mb-1 group-hover:text-[#D4A24F] transition-colors">
+                    {product.name}
+                  </h3>
+                  <p className="text-[#F4F1EA]/40 text-xs mb-2">{product.size}</p>
+                  <p className="text-[#D4A24F] font-semibold">
+                    ₹{product.price.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* View All Button */}
         <div className="mt-12 text-center">

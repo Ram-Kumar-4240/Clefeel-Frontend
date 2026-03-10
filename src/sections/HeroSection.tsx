@@ -12,7 +12,6 @@ export default function HeroSection() {
   const headlineRef = useRef<HTMLDivElement>(null);
   const subheadlineRef = useRef<HTMLDivElement>(null);
   const ctaRef = useRef<HTMLDivElement>(null);
-  const microcopyRef = useRef<HTMLDivElement>(null);
 
   // Load animation
   useEffect(() => {
@@ -61,31 +60,23 @@ export default function HeroSection() {
         { opacity: 1, y: 0, duration: 0.7 },
         1.0
       );
-
-      // Microcopy
-      tl.fromTo(
-        microcopyRef.current,
-        { opacity: 0 },
-        { opacity: 1, duration: 0.6 },
-        1.2
-      );
     }, sectionRef);
 
     return () => ctx.revert();
   }, []);
 
-  // Scroll-driven animation
+  // Scroll-driven animation — fixed for large screens
   useLayoutEffect(() => {
     const ctx = gsap.context(() => {
       const scrollTl = gsap.timeline({
         scrollTrigger: {
           trigger: sectionRef.current,
           start: 'top top',
-          end: '+=130%',
+          end: '+=100%',
           pin: true,
+          pinSpacing: true,
           scrub: 0.6,
           onLeaveBack: () => {
-            // Reset all elements when scrolling back to top
             gsap.set([labelRef.current, headlineRef.current, subheadlineRef.current, ctaRef.current], {
               opacity: 1,
               x: 0,
@@ -118,13 +109,6 @@ export default function HeroSection() {
         { x: 0, opacity: 1 },
         { x: '-10vw', opacity: 0, ease: 'power2.in' },
         0.72
-      );
-
-      scrollTl.fromTo(
-        microcopyRef.current,
-        { opacity: 1 },
-        { opacity: 0, ease: 'power2.in' },
-        0.75
       );
 
       scrollTl.fromTo(
@@ -203,17 +187,6 @@ export default function HeroSection() {
           <Link to="/shop" className="btn-primary inline-block">
             Shop Now
           </Link>
-        </div>
-
-        {/* Microcopy */}
-        <div
-          ref={microcopyRef}
-          className="absolute bottom-[6vh] right-[6vw] text-right"
-          style={{ opacity: 0 }}
-        >
-          <p className="text-[#F4F1EA]/50 text-sm">
-            Free shipping over ₹4,999
-          </p>
         </div>
       </div>
     </section>

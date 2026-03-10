@@ -14,16 +14,17 @@ import AccountPage from '@/pages/AccountPage';
 import AboutPage from '@/pages/AboutPage';
 import ContactPage from '@/pages/ContactPage';
 import PolicyPage from '@/pages/PolicyPage';
+import WishlistPage from '@/pages/WishlistPage';
 
 gsap.registerPlugin(ScrollTrigger);
 
 function ScrollToTop() {
   const { pathname } = useLocation();
-  
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [pathname]);
-  
+
   return null;
 }
 
@@ -31,7 +32,7 @@ function App() {
   useEffect(() => {
     // Refresh ScrollTrigger on route change
     ScrollTrigger.refresh();
-    
+
     return () => {
       ScrollTrigger.getAll().forEach(trigger => trigger.kill());
     };
@@ -43,13 +44,13 @@ function App() {
       <div className="relative min-h-screen bg-[#0B0B0D]">
         {/* Grain overlay */}
         <div className="grain-overlay" />
-        
+
         {/* Vignette */}
         <div className="vignette" />
-        
+
         {/* Navigation */}
         <Navigation />
-        
+
         {/* Main content */}
         <main>
           <Routes>
@@ -63,9 +64,10 @@ function App() {
             <Route path="/about" element={<AboutPage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/policies/:type" element={<PolicyPage />} />
+            <Route path="/wishlist" element={<WishlistPage />} />
           </Routes>
         </main>
-        
+
         {/* Footer */}
         <Footer />
       </div>

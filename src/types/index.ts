@@ -6,7 +6,7 @@ export interface Product {
   size: string;
   image: string;
   category: string;
-  collection: string;
+
   topNotes: string[];
   middleNotes: string[];
   baseNotes: string[];

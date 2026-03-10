@@ -2,8 +2,6 @@ import { useEffect, useRef } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import HeroSection from '@/sections/HeroSection';
-import BestSellersSection from '@/sections/BestSellersSection';
-import CollectionsSection from '@/sections/CollectionsSection';
 import WhyChooseSection from '@/sections/WhyChooseSection';
 import ShopPreviewSection from '@/sections/ShopPreviewSection';
 import AboutPreviewSection from '@/sections/AboutPreviewSection';
@@ -19,7 +17,7 @@ export default function HomePage() {
       const pinned = ScrollTrigger.getAll()
         .filter((st) => st.vars.pin)
         .sort((a, b) => a.start - b.start);
-      
+
       const maxScroll = ScrollTrigger.maxScroll(window);
       if (!maxScroll || pinned.length === 0) return;
 
@@ -64,8 +62,6 @@ export default function HomePage() {
   return (
     <div ref={mainRef} className="relative">
       <HeroSection />
-      <BestSellersSection />
-      <CollectionsSection />
       <WhyChooseSection />
       <ShopPreviewSection />
       <AboutPreviewSection />

@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Search, ShoppingBag, Menu, X, User } from 'lucide-react';
+import { ShoppingBag, Menu, X, User, Heart } from 'lucide-react';
 import { useCartStore } from '@/store/cartStore';
+import { useWishlistStore } from '@/store/wishlistStore';
 
 export default function Navigation() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
   const itemCount = useCartStore((state) => state.getItemCount());
+  const wishlistCount = useWishlistStore((state) => state.items.length);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -19,26 +21,22 @@ export default function Navigation() {
   }, []);
 
   const navLinks = [
+    { name: 'Home', path: '/' },
     { name: 'Shop', path: '/shop' },
-    { name: 'Collections', path: '/shop?tab=collections' },
     { name: 'About', path: '/about' },
   ];
 
   const isActive = (path: string) => {
-    if (path.includes('?')) {
-      return location.pathname === path.split('?')[0];
-    }
     return location.pathname === path;
   };
 
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          isScrolled
-            ? 'bg-[#0B0B0D]/90 backdrop-blur-md py-4'
-            : 'bg-transparent py-6'
-        }`}
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${isScrolled
+          ? 'bg-[#0B0B0D]/90 backdrop-blur-md py-4'
+          : 'bg-transparent py-6'
+          }`}
       >
         <div className="w-full px-6 lg:px-12">
           <div className="flex items-center justify-between">
@@ -46,7 +44,7 @@ export default function Navigation() {
             <Link
               to="/"
               className="text-2xl font-bold tracking-tight text-[#F4F1EA] hover:text-[#D4A24F] transition-colors"
-              style={{ fontFamily: 'Montserrat, sans-serif' }}
+              style={{ fontFamily: "'Playfair Display', serif" }}
             >
               CLEFEEL
             </Link>
@@ -57,11 +55,10 @@ export default function Navigation() {
                 <Link
                   key={link.name}
                   to={link.path}
-                  className={`luxury-label text-xs transition-colors ${
-                    isActive(link.path)
-                      ? 'text-[#D4A24F]'
-                      : 'text-[#F4F1EA]/80 hover:text-[#F4F1EA]'
-                  }`}
+                  className={`luxury-label text-xs transition-colors ${isActive(link.path)
+                    ? 'text-[#D4A24F]'
+                    : 'text-[#F4F1EA]/80 hover:text-[#F4F1EA]'
+                    }`}
                 >
                   {link.name}
                 </Link>
@@ -70,20 +67,28 @@ export default function Navigation() {
 
             {/* Right Icons */}
             <div className="flex items-center gap-6">
-              <button
-                className="text-[#F4F1EA]/80 hover:text-[#F4F1EA] transition-colors"
-                aria-label="Search"
+              <Link
+                to="/wishlist"
+                className={`relative transition-colors ${location.pathname === '/wishlist'
+                  ? 'text-[#D4A24F]'
+                  : 'text-[#F4F1EA]/80 hover:text-[#F4F1EA]'
+                  }`}
+                aria-label="Wishlist"
               >
-                <Search className="w-5 h-5" />
-              </button>
+                <Heart className="w-5 h-5" />
+                {wishlistCount > 0 && (
+                  <span className="absolute -top-2 -right-2 w-5 h-5 bg-[#D4A24F] text-[#0B0B0D] text-xs font-bold rounded-full flex items-center justify-center">
+                    {wishlistCount}
+                  </span>
+                )}
+              </Link>
 
               <Link
                 to="/account"
-                className={`hidden md:block transition-colors ${
-                  location.pathname === '/account'
-                    ? 'text-[#D4A24F]'
-                    : 'text-[#F4F1EA]/80 hover:text-[#F4F1EA]'
-                }`}
+                className={`hidden md:block transition-colors ${location.pathname === '/account'
+                  ? 'text-[#D4A24F]'
+                  : 'text-[#F4F1EA]/80 hover:text-[#F4F1EA]'
+                  }`}
                 aria-label="Account"
               >
                 <User className="w-5 h-5" />
@@ -121,11 +126,10 @@ export default function Navigation() {
 
       {/* Mobile Menu */}
       <div
-        className={`fixed inset-0 z-40 bg-[#0B0B0D]/98 backdrop-blur-lg transition-all duration-500 ${
-          isMobileMenuOpen
-            ? 'opacity-100 pointer-events-auto'
-            : 'opacity-0 pointer-events-none'
-        }`}
+        className={`fixed inset-0 z-40 bg-[#0B0B0D]/98 backdrop-blur-lg transition-all duration-500 ${isMobileMenuOpen
+          ? 'opacity-100 pointer-events-auto'
+          : 'opacity-0 pointer-events-none'
+          }`}
       >
         <div className="flex flex-col items-center justify-center h-full gap-8">
           {navLinks.map((link, index) => (
@@ -142,9 +146,16 @@ export default function Navigation() {
             </Link>
           ))}
           <Link
+            to="/wishlist"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="luxury-heading text-3xl text-[#F4F1EA] hover:text-[#D4A24F] transition-colors mt-2"
+          >
+            Wishlist
+          </Link>
+          <Link
             to="/account"
             onClick={() => setIsMobileMenuOpen(false)}
-            className="luxury-heading text-3xl text-[#F4F1EA] hover:text-[#D4A24F] transition-colors mt-4"
+            className="luxury-heading text-3xl text-[#F4F1EA] hover:text-[#D4A24F] transition-colors mt-2"
           >
             Account
           </Link>

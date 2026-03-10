@@ -12,8 +12,8 @@ export default function Footer() {
   ];
 
   const quickLinks = [
+    { name: 'Home', path: '/' },
     { name: 'Shop', path: '/shop' },
-    { name: 'Collections', path: '/shop?tab=collections' },
     { name: 'About Us', path: '/about' },
     { name: 'Contact', path: '/contact' },
   ];
@@ -28,7 +28,7 @@ export default function Footer() {
             <Link
               to="/"
               className="text-3xl font-bold tracking-tight text-[#F4F1EA]"
-              style={{ fontFamily: 'Montserrat, sans-serif' }}
+              style={{ fontFamily: "'Playfair Display', serif" }}
             >
               CLEFEEL
             </Link>

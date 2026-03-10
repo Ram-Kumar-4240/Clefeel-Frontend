@@ -2,10 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { products, collections } from '@/data/products';
+import { fetchProducts } from '@/data/api';
 import { useCartStore } from '@/store/cartStore';
-import { Plus, Filter, ChevronDown, Grid3X3, List } from 'lucide-react';
+import { useWishlistStore } from '@/store/wishlistStore';
+import { Plus, Filter, ChevronDown, Grid3X3, List, Heart } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import type { Product } from '@/types';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -18,32 +20,38 @@ const sortOptions = [
 ];
 
 export default function ShopPage() {
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [, setSearchParams] = useSearchParams();
   const [activeCategory, setActiveCategory] = useState('All');
-  const [activeCollection, setActiveCollection] = useState<string | null>(
-    searchParams.get('collection')
-  );
   const [sortBy, setSortBy] = useState('newest');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
   const pageRef = useRef<HTMLDivElement>(null);
   const headerRef = useRef<HTMLDivElement>(null);
   const gridRef = useRef<HTMLDivElement>(null);
   const addToCart = useCartStore((state) => state.addToCart);
+  const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
+  const isInWishlist = useWishlistStore((state) => state.isInWishlist);
+
+  // Backend-ready data fetching
+  useEffect(() => {
+    let cancelled = false;
+    fetchProducts().then((data) => {
+      if (!cancelled) {
+        setProducts(data);
+        setIsLoading(false);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // Filter and sort products
   let filteredProducts = products;
-  
+
   if (activeCategory !== 'All') {
     filteredProducts = filteredProducts.filter((p) => p.category === activeCategory);
-  }
-  
-  if (activeCollection) {
-    const collection = collections.find((c) => c.id === activeCollection);
-    if (collection) {
-      filteredProducts = filteredProducts.filter((p) => p.collection === collection.name);
-    }
   }
 
   // Sort products
@@ -55,28 +63,19 @@ export default function ShopPage() {
       filteredProducts = [...filteredProducts].sort((a, b) => b.price - a.price);
       break;
     case 'bestseller':
-      filteredProducts = [...filteredProducts].sort((a, b) => 
+      filteredProducts = [...filteredProducts].sort((a, b) =>
         (b.bestseller ? 1 : 0) - (a.bestseller ? 1 : 0)
       );
       break;
     default:
-      filteredProducts = [...filteredProducts].sort((a, b) => 
+      filteredProducts = [...filteredProducts].sort((a, b) =>
         (b.new ? 1 : 0) - (a.new ? 1 : 0)
       );
   }
 
   useEffect(() => {
-    const collection = searchParams.get('collection');
-    const tab = searchParams.get('tab');
-    if (collection) {
-      setActiveCollection(collection);
-    }
-    if (tab === 'collections') {
-      setIsFilterOpen(false);
-    }
-  }, [searchParams]);
+    if (isLoading) return;
 
-  useEffect(() => {
     const ctx = gsap.context(() => {
       gsap.fromTo(
         headerRef.current,
@@ -105,11 +104,10 @@ export default function ShopPage() {
     }, pageRef);
 
     return () => ctx.revert();
-  }, [filteredProducts]);
+  }, [filteredProducts, isLoading]);
 
   const clearFilters = () => {
     setActiveCategory('All');
-    setActiveCollection(null);
     setSearchParams({});
   };
 
@@ -119,43 +117,12 @@ export default function ShopPage() {
         {/* Header */}
         <div ref={headerRef} className="mb-10" style={{ opacity: 0 }}>
           <h1 className="luxury-heading text-[#F4F1EA] text-4xl lg:text-5xl mb-4">
-            {activeCollection 
-              ? collections.find(c => c.id === activeCollection)?.name || 'Shop'
-              : 'SHOP ALL'
-            }
+            SHOP ALL
           </h1>
           <p className="text-[#F4F1EA]/60 max-w-xl">
-            Discover our collection of premium fragrances crafted for the modern individual.
+            Discover our premium fragrances crafted for the modern individual.
           </p>
         </div>
-
-        {/* Collections Banner */}
-        {!activeCollection && (
-          <div className="mb-10 overflow-x-auto pb-4">
-            <div className="flex gap-4 min-w-max">
-              {collections.map((collection) => (
-                <button
-                  key={collection.id}
-                  onClick={() => {
-                    setActiveCollection(collection.id);
-                    setSearchParams({ collection: collection.id });
-                  }}
-                  className="relative w-64 h-32 overflow-hidden group"
-                >
-                  <img
-                    src={collection.image}
-                    alt={collection.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#0B0B0D]/90 to-transparent" />
-                  <div className="absolute bottom-3 left-3">
-                    <h3 className="text-[#F4F1EA] font-semibold text-sm">{collection.name}</h3>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {/* Filters Bar */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-8 pb-6 border-b border-[#F4F1EA]/10">
@@ -177,11 +144,10 @@ export default function ShopPage() {
                     <button
                       key={cat}
                       onClick={() => setActiveCategory(cat)}
-                      className={`px-4 py-2 text-xs uppercase tracking-wider border transition-all ${
-                        activeCategory === cat
-                          ? 'border-[#D4A24F] text-[#D4A24F]'
-                          : 'border-[#F4F1EA]/20 text-[#F4F1EA]/60'
-                      }`}
+                      className={`px-4 py-2 text-xs uppercase tracking-wider border transition-all ${activeCategory === cat
+                        ? 'border-[#D4A24F] text-[#D4A24F]'
+                        : 'border-[#F4F1EA]/20 text-[#F4F1EA]/60'
+                        }`}
                     >
                       {cat}
                     </button>
@@ -195,11 +161,10 @@ export default function ShopPage() {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-4 py-2 text-xs uppercase tracking-wider border transition-all ${
-                    activeCategory === cat
-                      ? 'border-[#D4A24F] text-[#D4A24F]'
-                      : 'border-[#F4F1EA]/20 text-[#F4F1EA]/60 hover:border-[#F4F1EA]/40'
-                  }`}
+                  className={`px-4 py-2 text-xs uppercase tracking-wider border transition-all ${activeCategory === cat
+                    ? 'border-[#D4A24F] text-[#D4A24F]'
+                    : 'border-[#F4F1EA]/20 text-[#F4F1EA]/60 hover:border-[#F4F1EA]/40'
+                    }`}
                 >
                   {cat}
                 </button>
@@ -242,7 +207,7 @@ export default function ShopPage() {
             </div>
 
             {/* Clear Filters */}
-            {(activeCategory !== 'All' || activeCollection) && (
+            {activeCategory !== 'All' && (
               <button
                 onClick={clearFilters}
                 className="text-[#D4A24F] text-xs uppercase tracking-wider hover:underline"
@@ -258,84 +223,112 @@ export default function ShopPage() {
           Showing {filteredProducts.length} products
         </p>
 
-        {/* Product Grid */}
-        <div
-          ref={gridRef}
-          className={`grid gap-6 ${
-            viewMode === 'grid'
+        {/* Loading State */}
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {[...Array(8)].map((_, i) => (
+              <div key={i} className="animate-pulse">
+                <div className="aspect-square bg-[#F4F1EA]/5 mb-4" />
+                <div className="h-4 bg-[#F4F1EA]/5 w-3/4 mb-2" />
+                <div className="h-3 bg-[#F4F1EA]/5 w-1/4 mb-2" />
+                <div className="h-4 bg-[#F4F1EA]/5 w-1/3" />
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* Product Grid */
+          <div
+            ref={gridRef}
+            className={`grid gap-6 ${viewMode === 'grid'
               ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
               : 'grid-cols-1'
-          }`}
-        >
-          {filteredProducts.map((product) => (
-            <div
-              key={product.id}
-              className={`product-card group ${viewMode === 'list' ? 'flex gap-6' : ''}`}
-              style={{ opacity: 0 }}
-            >
-              {/* Image */}
-              <Link
-                to={`/product/${product.id}`}
-                className={`relative overflow-hidden bg-[#F4F1EA]/5 ${
-                  viewMode === 'list' ? 'w-48 h-48 flex-shrink-0' : 'aspect-square mb-4'
-                }`}
+              }`}
+          >
+            {filteredProducts.map((product) => (
+              <div
+                key={product.id}
+                className={`product-card group ${viewMode === 'list' ? 'flex gap-6' : ''}`}
+                style={{ opacity: 0 }}
               >
-                <img
-                  src={product.image}
-                  alt={product.name}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                {product.bestseller && (
-                  <span className="absolute top-3 left-3 px-3 py-1 bg-[#D4A24F] text-[#0B0B0D] text-xs font-semibold uppercase">
-                    Bestseller
-                  </span>
-                )}
-                {product.new && (
-                  <span className="absolute top-3 left-3 px-3 py-1 bg-[#F4F1EA] text-[#0B0B0D] text-xs font-semibold uppercase">
-                    New
-                  </span>
-                )}
-                
-                {/* Quick Add Button */}
-                <button
-                  onClick={(e) => {
-                    e.preventDefault();
-                    addToCart(product);
-                  }}
-                  className={`absolute bg-[#D4A24F] text-[#0B0B0D] flex items-center justify-center gap-2 transition-transform duration-300 ${
-                    viewMode === 'list'
+                {/* Image */}
+                <Link
+                  to={`/product/${product.id}`}
+                  className={`relative overflow-hidden bg-[#F4F1EA]/5 ${viewMode === 'list' ? 'w-48 h-48 flex-shrink-0' : 'aspect-square mb-4'
+                    }`}
+                >
+                  <img
+                    src={product.image}
+                    alt={product.name}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                  />
+                  {product.bestseller && (
+                    <span className="absolute top-3 left-3 px-3 py-1 bg-[#D4A24F] text-[#0B0B0D] text-xs font-semibold uppercase">
+                      Bestseller
+                    </span>
+                  )}
+                  {product.new && (
+                    <span className="absolute top-3 left-3 px-3 py-1 bg-[#F4F1EA] text-[#0B0B0D] text-xs font-semibold uppercase">
+                      New
+                    </span>
+                  )}
+
+                  {/* Wishlist Button */}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      toggleWishlist(product);
+                    }}
+                    className="absolute top-3 right-3 w-9 h-9 bg-[#0B0B0D]/60 backdrop-blur-sm flex items-center justify-center rounded-full hover:bg-[#0B0B0D]/80 transition-colors"
+                    aria-label={`Toggle wishlist for ${product.name}`}
+                  >
+                    <Heart
+                      className={`w-4 h-4 transition-colors ${isInWishlist(product.id)
+                        ? 'text-[#D4A24F] fill-[#D4A24F]'
+                        : 'text-[#F4F1EA]/80'
+                        }`}
+                    />
+                  </button>
+
+                  {/* Quick Add Button */}
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      addToCart(product);
+                    }}
+                    className={`absolute bg-[#D4A24F] text-[#0B0B0D] flex items-center justify-center gap-2 transition-transform duration-300 ${viewMode === 'list'
                       ? 'bottom-3 right-3 w-10 h-10 rounded-full'
                       : 'bottom-0 left-0 right-0 py-3 translate-y-full group-hover:translate-y-0'
-                  }`}
-                >
-                  <Plus className="w-4 h-4" />
-                  {viewMode === 'grid' && (
-                    <span className="text-xs font-semibold uppercase tracking-wider">Add to Cart</span>
-                  )}
-                </button>
-              </Link>
+                      }`}
+                  >
+                    <Plus className="w-4 h-4" />
+                    {viewMode === 'grid' && (
+                      <span className="text-xs font-semibold uppercase tracking-wider">Add to Cart</span>
+                    )}
+                  </button>
+                </Link>
 
-              {/* Info */}
-              <div className={viewMode === 'list' ? 'flex-1 py-2' : ''}>
-                <h3 className="text-[#F4F1EA] font-semibold text-sm mb-1 group-hover:text-[#D4A24F] transition-colors">
-                  {product.name}
-                </h3>
-                <p className="text-[#F4F1EA]/40 text-xs mb-2">{product.size}</p>
-                {viewMode === 'list' && (
-                  <p className="text-[#F4F1EA]/60 text-sm mb-3 line-clamp-2">
-                    {product.description}
+                {/* Info */}
+                <div className={viewMode === 'list' ? 'flex-1 py-2' : ''}>
+                  <h3 className="text-[#F4F1EA] font-semibold text-sm mb-1 group-hover:text-[#D4A24F] transition-colors">
+                    {product.name}
+                  </h3>
+                  <p className="text-[#F4F1EA]/40 text-xs mb-2">{product.size}</p>
+                  {viewMode === 'list' && (
+                    <p className="text-[#F4F1EA]/60 text-sm mb-3 line-clamp-2">
+                      {product.description}
+                    </p>
+                  )}
+                  <p className="text-[#D4A24F] font-semibold">
+                    ₹{product.price.toLocaleString()}
                   </p>
-                )}
-                <p className="text-[#D4A24F] font-semibold">
-                  ₹{product.price.toLocaleString()}
-                </p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Empty State */}
-        {filteredProducts.length === 0 && (
+        {!isLoading && filteredProducts.length === 0 && (
           <div className="text-center py-20">
             <p className="text-[#F4F1EA]/60 text-lg mb-4">No products found</p>
             <button onClick={clearFilters} className="btn-primary">
