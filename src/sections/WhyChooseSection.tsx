@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect, useState, useEffect } from 'react';
+import { useRef, useEffect, useState } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { fetchWhyChooseFeatures } from '@/data/api';
@@ -17,13 +17,13 @@ const iconMap: Record<string, React.ElementType> = {
 };
 
 export default function WhyChooseSection() {
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const sectionRef = useRef<HTMLElement>(null);
   const headingRef = useRef<HTMLDivElement>(null);
   const cardsRef = useRef<HTMLDivElement>(null);
   const [features, setFeatures] = useState<WhyChooseFeature[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
 
-  // Backend-ready dynamic data fetching
   useEffect(() => {
     let cancelled = false;
     fetchWhyChooseFeatures().then((data) => {
@@ -35,49 +35,43 @@ export default function WhyChooseSection() {
     return () => { cancelled = true; };
   }, []);
 
-  useLayoutEffect(() => {
+  useEffect(() => {
     if (isLoading || features.length === 0) return;
 
-    // Wait for DOM to paint
     const raf = requestAnimationFrame(() => {
       const ctx = gsap.context(() => {
-        // Heading animation
-        gsap.fromTo(
-          headingRef.current,
-          { y: 40, opacity: 0 },
-          {
-            y: 0,
-            opacity: 1,
-            duration: 0.8,
-            ease: 'power3.out',
-            scrollTrigger: {
-              trigger: headingRef.current,
-              start: 'top 80%',
-              end: 'top 50%',
-              toggleActions: 'play none none reverse',
-            },
-          }
-        );
+        if (headingRef.current) {
+          gsap.fromTo(
+            headingRef.current,
+            { y: 40, opacity: 0 },
+            {
+              y: 0,
+              opacity: 1,
+              duration: 0.9,
+              ease: 'power4.out',
+              scrollTrigger: {
+                trigger: headingRef.current,
+                start: 'top 85%',
+              },
+            }
+          );
+        }
 
-        // Cards stagger animation with enhanced effects
-        const cards = cardsRef.current?.querySelectorAll('.feature-card');
-        if (cards) {
+        const cards = cardsRef.current?.querySelectorAll('.wc-card');
+        if (cards && cards.length > 0) {
           gsap.fromTo(
             cards,
-            { y: 80, opacity: 0, scale: 0.9, rotateX: 8 },
+            { y: 50, opacity: 0, scale: 0.96 },
             {
               y: 0,
               opacity: 1,
               scale: 1,
-              rotateX: 0,
-              duration: 0.8,
-              stagger: 0.12,
+              duration: 0.65,
+              stagger: 0.08,
               ease: 'power3.out',
               scrollTrigger: {
                 trigger: cardsRef.current,
-                start: 'top 80%',
-                end: 'top 40%',
-                toggleActions: 'play none none reverse',
+                start: 'top 82%',
               },
             }
           );
@@ -93,83 +87,195 @@ export default function WhyChooseSection() {
   return (
     <section
       ref={sectionRef}
-      className="relative bg-[#6B4C42] py-24 lg:py-32 z-40 overflow-hidden"
+      className="relative py-28 lg:py-40 overflow-hidden"
+      style={{ background: '#0B0B0D' }}
     >
-      {/* Animated background gradient */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-gradient-radial from-[#D4A24F]/8 via-transparent to-black/30" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[120%] h-[120%] bg-gradient-to-b from-transparent via-[#6B4C42]/50 to-transparent opacity-60" />
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        {/* Gold radial glow top */}
+        <div
+          className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[900px] h-[900px] rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(212,162,79,0.06) 0%, transparent 60%)' }}
+        />
+        {/* Subtle gold glow bottom-right */}
+        <div
+          className="absolute bottom-1/4 right-1/4 w-[500px] h-[500px] rounded-full"
+          style={{ background: 'radial-gradient(circle, rgba(212,162,79,0.04) 0%, transparent 60%)' }}
+        />
+        {/* Subtle grid pattern */}
+        <div
+          className="absolute inset-0 opacity-[0.02]"
+          style={{
+            backgroundImage: `
+              linear-gradient(rgba(212,162,79,0.5) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(212,162,79,0.5) 1px, transparent 1px)
+            `,
+            backgroundSize: '80px 80px',
+          }}
+        />
       </div>
 
       <div className="relative z-10 w-full px-6 lg:px-[6vw]">
-        {/* Heading */}
-        <div ref={headingRef} className="mb-16 text-center" style={{ opacity: 0 }}>
-          <p className="luxury-label text-[#D4A24F]/80 mb-4 text-xs tracking-[0.2em]">
-            THE CLEFEEL DIFFERENCE
-          </p>
+        {/* Header */}
+        <div ref={headingRef} className="text-center mb-20" style={{ opacity: 0 }}>
+          <div className="inline-flex items-center gap-4 mb-6">
+            <div className="w-16 h-px bg-gradient-to-r from-transparent via-[#D4A24F]/60 to-transparent" />
+            <span className="text-[#D4A24F] text-xs font-bold tracking-[0.35em] uppercase">
+              The CLEFEEL Difference
+            </span>
+            <div className="w-16 h-px bg-gradient-to-r from-transparent via-[#D4A24F]/60 to-transparent" />
+          </div>
           <h2
             className="luxury-heading text-[#F4F1EA]"
-            style={{ fontSize: 'clamp(28px, 3.5vw, 56px)' }}
+            style={{ fontSize: 'clamp(32px, 4vw, 64px)' }}
           >
-            WHY CHOOSE <span className="text-[#D4A24F]">CLEFEEL</span>
+            WHY CHOOSE{' '}
+            <span
+              className="bg-clip-text text-transparent"
+              style={{
+                backgroundImage: 'linear-gradient(135deg, #D4A24F 0%, #F4D58D 50%, #D4A24F 100%)',
+              }}
+            >
+              CLEFEEL
+            </span>
           </h2>
-          <div className="mt-4 mx-auto w-16 h-[2px] bg-gradient-to-r from-transparent via-[#D4A24F] to-transparent" />
+          <p className="mt-4 text-[#F4F1EA]/50 text-base lg:text-lg max-w-xl mx-auto">
+            Crafted with precision, delivered with care — every detail is designed for perfection.
+          </p>
         </div>
 
-        {/* Feature Cards — Loading State */}
+        {/* Cards Grid */}
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto">
             {[...Array(6)].map((_, i) => (
               <div
                 key={i}
-                className="bg-[#0B0B0D]/30 backdrop-blur-md border border-[#F4F1EA]/5 p-8 animate-pulse"
-              >
-                <div className="w-14 h-14 bg-[#F4F1EA]/5 rounded-xl mb-6" />
-                <div className="h-5 bg-[#F4F1EA]/5 rounded w-3/4 mb-3" />
-                <div className="h-4 bg-[#F4F1EA]/5 rounded w-full" />
-              </div>
+                className="h-56 rounded-2xl animate-pulse"
+                style={{ background: 'rgba(212,162,79,0.04)', border: '1px solid rgba(212,162,79,0.08)' }}
+              />
             ))}
           </div>
         ) : (
-          /* Feature Cards — Glassmorphism Design */
           <div
             ref={cardsRef}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 max-w-6xl mx-auto"
           >
             {features.map((feature, index) => {
-              const Icon = iconMap[feature.icon];
+              const Icon = iconMap[feature.icon] || Gem;
+              const isHovered = hoveredCard === index;
+
               return (
                 <div
                   key={index}
-                  className="feature-card group relative bg-[#0B0B0D]/30 backdrop-blur-md border border-[#F4F1EA]/10 p-8 transition-all duration-500 hover:border-[#D4A24F]/40 hover:-translate-y-2 hover:shadow-[0_20px_60px_-15px_rgba(212,162,79,0.15)] cursor-default overflow-hidden"
+                  className="wc-card group relative"
                   style={{ opacity: 0 }}
+                  onMouseEnter={() => setHoveredCard(index)}
+                  onMouseLeave={() => setHoveredCard(null)}
                 >
-                  {/* Hover glow effect */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-[#D4A24F]/0 via-transparent to-[#D4A24F]/0 group-hover:from-[#D4A24F]/5 group-hover:to-[#D4A24F]/3 transition-all duration-500 pointer-events-none" />
+                  {/* Card */}
+                  <div
+                    className="relative rounded-2xl p-8 lg:p-10 h-full overflow-hidden transition-all duration-500 cursor-pointer"
+                    style={{
+                      background: isHovered
+                        ? 'linear-gradient(135deg, rgba(212,162,79,0.1) 0%, rgba(244,241,234,0.04) 100%)'
+                        : 'rgba(244,241,234,0.03)',
+                      border: isHovered
+                        ? '1px solid rgba(212,162,79,0.35)'
+                        : '1px solid rgba(244,241,234,0.06)',
+                      backdropFilter: 'blur(12px)',
+                      boxShadow: isHovered
+                        ? '0 8px 32px rgba(212,162,79,0.08), inset 0 1px 0 rgba(255,255,255,0.05)'
+                        : 'inset 0 1px 0 rgba(255,255,255,0.02)',
+                    }}
+                  >
+                    {/* Animated top bar */}
+                    <div
+                      className="absolute top-0 left-0 h-[2px] rounded-full transition-all duration-700 ease-out"
+                      style={{
+                        width: isHovered ? '100%' : '0%',
+                        background: 'linear-gradient(90deg, #D4A24F, #F4D58D, #D4A24F)',
+                      }}
+                    />
 
-                  {/* Corner accent */}
-                  <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-bl from-[#D4A24F]/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    {/* Floating number badge */}
+                    <div
+                      className="absolute top-5 right-6 w-9 h-9 rounded-full flex items-center justify-center text-xs font-black transition-all duration-500"
+                      style={{
+                        background: isHovered
+                          ? 'rgba(212,162,79,0.15)'
+                          : 'rgba(244,241,234,0.04)',
+                        border: isHovered
+                          ? '1px solid rgba(212,162,79,0.3)'
+                          : '1px solid rgba(244,241,234,0.06)',
+                        color: isHovered ? '#D4A24F' : 'rgba(244,241,234,0.15)',
+                      }}
+                    >
+                      {String(index + 1).padStart(2, '0')}
+                    </div>
 
-                  {/* Icon container with animation */}
-                  <div className="relative w-14 h-14 bg-gradient-to-br from-[#D4A24F]/20 to-[#D4A24F]/5 rounded-xl flex items-center justify-center mb-6 transition-all duration-500 group-hover:scale-110 group-hover:from-[#D4A24F]/30 group-hover:to-[#D4A24F]/10 group-hover:shadow-[0_0_25px_rgba(212,162,79,0.2)]">
-                    <Icon className="w-6 h-6 text-[#D4A24F] transition-transform duration-500 group-hover:scale-110" />
+                    {/* Icon container */}
+                    <div className="relative mb-6">
+                      <div
+                        className="w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-500"
+                        style={{
+                          background: isHovered
+                            ? 'linear-gradient(135deg, #D4A24F, #F4D58D)'
+                            : 'rgba(212,162,79,0.1)',
+                          boxShadow: isHovered
+                            ? '0 4px 20px rgba(212,162,79,0.25)'
+                            : 'none',
+                        }}
+                      >
+                        <Icon
+                          className="w-6 h-6 transition-all duration-500"
+                          style={{
+                            color: isHovered ? '#0B0B0D' : '#D4A24F',
+                            transform: isHovered ? 'scale(1.1)' : 'scale(1)',
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Content */}
+                    <h3
+                      className="font-semibold text-lg mb-3 transition-colors duration-400"
+                      style={{ color: isHovered ? '#D4A24F' : '#F4F1EA' }}
+                    >
+                      {feature.title}
+                    </h3>
+                    <p className="text-[#F4F1EA]/45 text-sm leading-relaxed">
+                      {feature.description}
+                    </p>
+
+                    {/* Bottom glow effect */}
+                    {isHovered && (
+                      <div
+                        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-3/4 h-px"
+                        style={{
+                          background: 'linear-gradient(90deg, transparent, rgba(212,162,79,0.4), transparent)',
+                        }}
+                      />
+                    )}
                   </div>
-
-                  {/* Content */}
-                  <h3 className="relative text-[#F4F1EA] font-semibold text-lg mb-3 transition-colors duration-300 group-hover:text-[#D4A24F]">
-                    {feature.title}
-                  </h3>
-                  <p className="relative text-[#F4F1EA]/60 text-sm leading-relaxed">
-                    {feature.description}
-                  </p>
-
-                  {/* Bottom accent line */}
-                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-[#D4A24F] to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
                 </div>
               );
             })}
           </div>
         )}
+
+        {/* Bottom trust strip */}
+        <div className="mt-20 flex items-center justify-center gap-8 flex-wrap">
+          {['Premium Ingredients', 'Cruelty Free', 'Made in India'].map((label, i) => (
+            <div key={i} className="flex items-center gap-3">
+              <div
+                className="w-2 h-2 rounded-full"
+                style={{ background: '#D4A24F' }}
+              />
+              <span className="text-[#F4F1EA]/35 text-xs tracking-wider uppercase">{label}</span>
+              {i < 2 && <div className="hidden sm:block w-px h-4 bg-[#F4F1EA]/10 ml-5" />}
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

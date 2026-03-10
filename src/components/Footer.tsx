@@ -22,7 +22,7 @@ export default function Footer() {
     <footer className="bg-[#0B0B0D] border-t border-[#F4F1EA]/10">
       {/* Main Footer */}
       <div className="w-full px-6 lg:px-12 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
           {/* Brand */}
           <div className="lg:col-span-1">
             <Link
@@ -92,24 +92,6 @@ export default function Footer() {
               ))}
             </ul>
           </div>
-
-          {/* Newsletter */}
-          <div>
-            <h4 className="luxury-label text-xs text-[#F4F1EA]/40 mb-6">Newsletter</h4>
-            <p className="text-[#F4F1EA]/60 text-sm mb-4">
-              Subscribe for exclusive offers and new arrivals.
-            </p>
-            <form className="flex flex-col gap-3" onSubmit={(e) => e.preventDefault()}>
-              <input
-                type="email"
-                placeholder="Your email"
-                className="w-full px-4 py-3 bg-[#F4F1EA]/5 border border-[#F4F1EA]/10 text-[#F4F1EA] placeholder:text-[#F4F1EA]/30 text-sm focus:outline-none focus:border-[#D4A24F] transition-colors"
-              />
-              <button type="submit" className="btn-primary w-full">
-                Subscribe
-              </button>
-            </form>
-          </div>
         </div>
       </div>
 
@@ -122,7 +104,7 @@ export default function Footer() {
             </p>
             <div className="flex items-center gap-6">
               <span className="text-[#F4F1EA]/40 text-xs">Free shipping over ₹4,999</span>
-              <span className="text-[#F4F1EA]/40 text-xs">COD Available</span>
+              <span className="text-[#F4F1EA]/40 text-xs">Secure Payments</span>
               <span className="text-[#F4F1EA]/40 text-xs">Pan India Delivery</span>
             </div>
           </div>

@@ -2,13 +2,11 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { useWishlistStore } from '@/store/wishlistStore';
-import { useCartStore } from '@/store/cartStore';
-import { Heart, Trash2, Plus } from 'lucide-react';
+import { Heart, Trash2 } from 'lucide-react';
 
 export default function WishlistPage() {
     const items = useWishlistStore((state) => state.items);
     const removeFromWishlist = useWishlistStore((state) => state.removeFromWishlist);
-    const addToCart = useCartStore((state) => state.addToCart);
     const pageRef = useRef<HTMLDivElement>(null);
     const headerRef = useRef<HTMLDivElement>(null);
     const gridRef = useRef<HTMLDivElement>(null);
@@ -85,12 +83,13 @@ export default function WishlistPage() {
                                 {/* Image */}
                                 <Link
                                     to={`/product/${product.id}`}
-                                    className="block relative overflow-hidden aspect-square mb-4 bg-[#F4F1EA]/5"
+                                    className="block relative overflow-hidden aspect-[4/5] mb-4 bg-[#F4F1EA]/5"
                                 >
                                     <img
                                         src={product.image}
                                         alt={product.name}
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                                        loading="lazy"
                                     />
 
                                     {/* Remove from Wishlist */}
@@ -99,23 +98,18 @@ export default function WishlistPage() {
                                             e.preventDefault();
                                             removeFromWishlist(product.id);
                                         }}
-                                        className="absolute top-3 right-3 w-9 h-9 bg-[#0B0B0D]/60 backdrop-blur-sm flex items-center justify-center rounded-full hover:bg-red-900/60 transition-colors"
+                                        className="absolute top-3 right-3 w-9 h-9 bg-[#0B0B0D]/60 backdrop-blur-sm flex items-center justify-center rounded-full hover:bg-red-900/60 transition-colors z-10"
                                         aria-label={`Remove ${product.name} from wishlist`}
                                     >
                                         <Trash2 className="w-4 h-4 text-[#F4F1EA]/80" />
                                     </button>
 
-                                    {/* Quick Add Button */}
-                                    <button
-                                        onClick={(e) => {
-                                            e.preventDefault();
-                                            addToCart(product);
-                                        }}
-                                        className="absolute bottom-0 left-0 right-0 bg-[#D4A24F] text-[#0B0B0D] py-3 flex items-center justify-center gap-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300"
-                                    >
-                                        <Plus className="w-4 h-4" />
-                                        <span className="text-xs font-semibold uppercase tracking-wider">Add to Cart</span>
-                                    </button>
+                                    {/* Hover CTA */}
+                                    <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out z-20">
+                                        <span className="w-full block text-center py-3 bg-[#0B0B0D]/80 backdrop-blur-md border border-[#D4A24F]/30 text-[#F4F1EA] text-xs uppercase tracking-wider font-semibold">
+                                            View Details
+                                        </span>
+                                    </div>
                                 </Link>
 
                                 {/* Info */}
@@ -123,9 +117,11 @@ export default function WishlistPage() {
                                     <h3 className="text-[#F4F1EA] font-semibold text-sm mb-1 group-hover:text-[#D4A24F] transition-colors">
                                         {product.name}
                                     </h3>
-                                    <p className="text-[#F4F1EA]/40 text-xs mb-2">{product.size}</p>
+                                    <p className="text-[#F4F1EA]/40 text-xs mb-2">
+                                        {product.sizes.map(s => s.sizeName).join(' / ')}
+                                    </p>
                                     <p className="text-[#D4A24F] font-semibold">
-                                        ₹{product.price.toLocaleString()}
+                                        ₹{product.basePrice.toLocaleString()}
                                     </p>
                                 </div>
                             </div>

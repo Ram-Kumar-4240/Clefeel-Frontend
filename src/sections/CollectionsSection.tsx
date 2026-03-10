@@ -2,8 +2,14 @@ import { useRef, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { collections } from '@/data/products';
 import { ArrowRight } from 'lucide-react';
+
+const collections = [
+  { id: 'oud', name: 'Royal Oud', image: '/product_royal_oud.jpg' },
+  { id: 'floral', name: 'Velvet Rose', image: '/product_velvet_rose.jpg' },
+  { id: 'amber', name: 'Amber Mystique', image: '/product_amber_mystique.jpg' },
+  { id: 'noir', name: 'Midnight Noir', image: '/product_midnight_noir.jpg' },
+];
 
 gsap.registerPlugin(ScrollTrigger);
 

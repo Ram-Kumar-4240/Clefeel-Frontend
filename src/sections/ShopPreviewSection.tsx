@@ -1,102 +1,72 @@
-import { useRef, useLayoutEffect, useState, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
+import { ArrowRight, Heart } from 'lucide-react';
 import { fetchProducts } from '@/data/api';
-import { useCartStore } from '@/store/cartStore';
 import { useWishlistStore } from '@/store/wishlistStore';
-import { Plus, Filter, Heart } from 'lucide-react';
 import type { Product } from '@/types';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const categories = ['All', 'Oud', 'Floral', 'Amber', 'Fresh', 'Spicy'];
-
 export default function ShopPreviewSection() {
-  const sectionRef = useRef<HTMLDivElement>(null);
-  const headerRef = useRef<HTMLDivElement>(null);
-  const filtersRef = useRef<HTMLDivElement>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
-
-  const [activeCategory, setActiveCategory] = useState('All');
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const addToCart = useCartStore((state) => state.addToCart);
-  const toggleWishlist = useWishlistStore((state) => state.toggleWishlist);
-  const isInWishlist = useWishlistStore((state) => state.isInWishlist);
 
-  // Backend-ready data fetching
+  const sectionRef = useRef<HTMLElement>(null);
+  const headerRef = useRef<HTMLDivElement>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+
+  const { items: wishlistItems, toggleWishlist } = useWishlistStore();
+
   useEffect(() => {
-    let cancelled = false;
-    fetchProducts().then((data) => {
-      if (!cancelled) {
-        setProducts(data);
-        setIsLoading(false);
-      }
-    });
-    return () => { cancelled = true; };
+    const loadProducts = async () => {
+      setIsLoading(true);
+      const allProducts = await fetchProducts();
+      // Show only current bestsellers
+      setProducts(allProducts.filter(p => p.bestseller).slice(0, 4));
+      setIsLoading(false);
+    };
+
+    loadProducts();
   }, []);
 
-  const filteredProducts = activeCategory === 'All'
-    ? products
-    : products.filter((p) => p.category === activeCategory);
-
-  useLayoutEffect(() => {
-    if (isLoading) return;
+  useEffect(() => {
+    if (isLoading || products.length === 0) return;
 
     const ctx = gsap.context(() => {
       // Header animation
       gsap.fromTo(
-        headerRef.current,
-        { y: 24, opacity: 0 },
+        headerRef.current?.children ? Array.from(headerRef.current.children) : [],
+        { y: 30, opacity: 0 },
         {
           y: 0,
           opacity: 1,
-          duration: 0.7,
+          duration: 0.8,
+          stagger: 0.1,
           ease: 'power3.out',
           scrollTrigger: {
             trigger: headerRef.current,
             start: 'top 80%',
-            toggleActions: 'play none none reverse',
           },
         }
       );
 
-      // Filters animation
-      gsap.fromTo(
-        filtersRef.current,
-        { y: 20, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.6,
-          delay: 0.1,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: filtersRef.current,
-            start: 'top 80%',
-            toggleActions: 'play none none reverse',
-          },
-        }
-      );
-
-      // Grid cards animation
-      const cards = gridRef.current?.querySelectorAll('.product-card');
-      if (cards) {
+      // Grid items animation
+      if (gridRef.current) {
+        const cards = gridRef.current.children;
         gsap.fromTo(
           cards,
-          { y: 50, opacity: 0, scale: 0.96 },
+          { y: 50, opacity: 0 },
           {
             y: 0,
             opacity: 1,
-            scale: 1,
-            duration: 0.6,
-            stagger: 0.08,
+            duration: 0.8,
+            stagger: 0.15,
             ease: 'power3.out',
             scrollTrigger: {
               trigger: gridRef.current,
               start: 'top 75%',
-              toggleActions: 'play none none reverse',
             },
           }
         );
@@ -104,144 +74,105 @@ export default function ShopPreviewSection() {
     }, sectionRef);
 
     return () => ctx.revert();
-  }, [filteredProducts, isLoading]);
+  }, [isLoading, products.length]);
 
   return (
-    <section
-      ref={sectionRef}
-      className="relative bg-[#0B0B0D] py-24 lg:py-32 z-50"
-    >
-      <div className="w-full px-6 lg:px-[6vw]">
-        {/* Header */}
-        <div ref={headerRef} className="mb-8" style={{ opacity: 0 }}>
-          <h2
-            className="luxury-heading text-[#F4F1EA] mb-4"
-            style={{ fontSize: 'clamp(28px, 3.5vw, 56px)' }}
-          >
-            SHOP <span className="text-[#D4A24F]">ALL</span>
-          </h2>
-          <p className="text-[#F4F1EA]/60 text-base max-w-md">
-            Filter by mood. Sort by preference. Add in seconds.
-          </p>
-        </div>
+    <section ref={sectionRef} className="py-24 lg:py-32 bg-[#0B0B0D] relative overflow-hidden">
+      {/* Background Elements */}
+      <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-[#D4A24F]/5 rounded-full blur-[120px] -translate-y-1/2 translate-x-1/3 pointer-events-none" />
+      <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-[#D4A24F]/5 rounded-full blur-[100px] translate-y-1/2 -translate-x-1/3 pointer-events-none" />
 
-        {/* Filters */}
-        <div
-          ref={filtersRef}
-          className="flex flex-wrap items-center gap-3 mb-10"
-          style={{ opacity: 0 }}
-        >
-          <div className="flex items-center gap-2 text-[#F4F1EA]/40 mr-4">
-            <Filter className="w-4 h-4" />
-            <span className="text-xs uppercase tracking-wider">Filter:</span>
+      <div className="w-full px-6 lg:px-[6vw] relative z-10">
+        <div ref={headerRef} className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+          <div className="max-w-xl">
+            <h2 className="luxury-heading text-[#F4F1EA] text-3xl md:text-4xl lg:text-5xl mb-4 leading-tight">
+              DISCOVER <span className="text-[#D4A24F] italic">EXCELLENCE</span>
+            </h2>
+            <p className="text-[#F4F1EA]/60 text-lg">
+              Explore our curated selection of signature fragrances, crafted for those who demand nothing but the best.
+            </p>
           </div>
-          {categories.map((category) => (
-            <button
-              key={category}
-              onClick={() => setActiveCategory(category)}
-              className={`px-4 py-2 text-xs uppercase tracking-wider border transition-all ${activeCategory === category
-                  ? 'border-[#D4A24F] text-[#D4A24F]'
-                  : 'border-[#F4F1EA]/20 text-[#F4F1EA]/60 hover:border-[#F4F1EA]/40'
-                }`}
-            >
-              {category}
-            </button>
-          ))}
+          <Link
+            to="/shop"
+            className="group flex items-center gap-3 text-[#D4A24F] font-semibold uppercase tracking-widest text-sm hover:text-[#F4F1EA] transition-colors"
+          >
+            <span>View All</span>
+            <span className="w-10 h-10 rounded-full border border-[#D4A24F] flex items-center justify-center group-hover:bg-[#D4A24F] group-hover:text-[#0B0B0D] transition-all duration-300">
+              <ArrowRight className="w-5 h-5 -rotate-45 group-hover:rotate-0 transition-transform duration-300" />
+            </span>
+          </Link>
         </div>
 
-        {/* Loading State */}
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[...Array(8)].map((_, i) => (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+            {[...Array(4)].map((_, i) => (
               <div key={i} className="animate-pulse">
-                <div className="aspect-square bg-[#F4F1EA]/5 mb-4" />
-                <div className="h-4 bg-[#F4F1EA]/5 w-3/4 mb-2" />
-                <div className="h-3 bg-[#F4F1EA]/5 w-1/4 mb-2" />
-                <div className="h-4 bg-[#F4F1EA]/5 w-1/3" />
+                <div className="w-full aspect-[4/5] bg-[#F4F1EA]/5 mb-4" />
+                <div className="w-2/3 h-5 bg-[#F4F1EA]/10 mb-2" />
+                <div className="w-1/3 h-4 bg-[#F4F1EA]/10" />
               </div>
             ))}
           </div>
         ) : (
-          /* Product Grid */
-          <div
-            ref={gridRef}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-          >
-            {filteredProducts.map((product) => (
-              <div
-                key={product.id}
-                className="product-card group"
-                style={{ opacity: 0 }}
-              >
-                {/* Image */}
-                <Link to={`/product/${product.id}`} className="block relative overflow-hidden aspect-square mb-4 bg-[#F4F1EA]/5">
-                  <img
-                    src={product.image}
-                    alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                  />
-                  {product.bestseller && (
-                    <span className="absolute top-3 left-3 px-3 py-1 bg-[#D4A24F] text-[#0B0B0D] text-xs font-semibold uppercase">
-                      Bestseller
-                    </span>
-                  )}
-                  {product.new && (
-                    <span className="absolute top-3 left-3 px-3 py-1 bg-[#F4F1EA] text-[#0B0B0D] text-xs font-semibold uppercase">
-                      New
-                    </span>
-                  )}
+          <div ref={gridRef} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-8">
+            {products.map((product) => {
+              const isLiked = wishlistItems.some(item => item.id === product.id);
 
-                  {/* Wishlist Button */}
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      toggleWishlist(product);
-                    }}
-                    className="absolute top-3 right-3 w-9 h-9 bg-[#0B0B0D]/60 backdrop-blur-sm flex items-center justify-center rounded-full hover:bg-[#0B0B0D]/80 transition-colors"
-                    aria-label={`Toggle wishlist for ${product.name}`}
-                  >
-                    <Heart
-                      className={`w-4 h-4 transition-colors ${isInWishlist(product.id)
-                          ? 'text-[#D4A24F] fill-[#D4A24F]'
-                          : 'text-[#F4F1EA]/80'
-                        }`}
-                    />
-                  </button>
+              return (
+                <div key={product.id} className="group cursor-pointer">
+                  <div className="relative aspect-[4/5] bg-[#F4F1EA]/5 overflow-hidden mb-5">
+                    <Link to={`/product/${product.id}`} className="block w-full h-full">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        loading="lazy"
+                      />
+                    </Link>
 
-                  {/* Quick Add Button */}
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      addToCart(product);
-                    }}
-                    className="absolute bottom-0 left-0 right-0 bg-[#D4A24F] text-[#0B0B0D] py-3 flex items-center justify-center gap-2 translate-y-full group-hover:translate-y-0 transition-transform duration-300"
-                  >
-                    <Plus className="w-4 h-4" />
-                    <span className="text-xs font-semibold uppercase tracking-wider">Add to Cart</span>
-                  </button>
-                </Link>
+                    <div className="absolute inset-0 bg-[#0B0B0D]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-                {/* Info */}
-                <div>
-                  <h3 className="text-[#F4F1EA] font-semibold text-sm mb-1 group-hover:text-[#D4A24F] transition-colors">
-                    {product.name}
-                  </h3>
-                  <p className="text-[#F4F1EA]/40 text-xs mb-2">{product.size}</p>
-                  <p className="text-[#D4A24F] font-semibold">
-                    ₹{product.price.toLocaleString()}
-                  </p>
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleWishlist(product);
+                      }}
+                      className="absolute top-4 right-4 z-20 w-10 h-10 rounded-full bg-[#0B0B0D]/50 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 hover:bg-[#D4A24F]"
+                      aria-label={isLiked ? "Remove from wishlist" : "Add to wishlist"}
+                    >
+                      <Heart
+                        className={`w-5 h-5 transition-colors ${isLiked ? 'text-red-500 fill-current' : 'text-[#F4F1EA] group-hover:text-[#0B0B0D]'
+                          }`}
+                      />
+                    </button>
+
+                    <div className="absolute bottom-0 left-0 w-full p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-out z-20">
+                      <Link
+                        to={`/product/${product.id}`}
+                        className="w-full block text-center py-3 bg-[#0B0B0D]/80 backdrop-blur-md border border-[#D4A24F]/30 text-[#F4F1EA] text-sm uppercase tracking-wider font-semibold hover:bg-[#D4A24F] hover:text-[#0B0B0D] transition-colors"
+                      >
+                        Explore Details
+                      </Link>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="text-[#F4F1EA] font-semibold text-lg mb-1 group-hover:text-[#D4A24F] transition-colors">
+                        {product.name}
+                      </h3>
+                      <p className="text-[#F4F1EA]/40 text-sm">{product.category}</p>
+                    </div>
+                    <p className="text-[#D4A24F] font-medium tracking-wide">
+                      ₹{product.basePrice.toLocaleString()}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
-
-        {/* View All Button */}
-        <div className="mt-12 text-center">
-          <Link to="/shop" className="btn-secondary inline-block">
-            View All Products
-          </Link>
-        </div>
       </div>
     </section>
   );

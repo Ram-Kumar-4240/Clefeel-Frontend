@@ -75,7 +75,7 @@ export default function HeroSection() {
           end: '+=100%',
           pin: true,
           pinSpacing: true,
-          scrub: 0.6,
+          scrub: 1.2,
           onLeaveBack: () => {
             gsap.set([labelRef.current, headlineRef.current, subheadlineRef.current, ctaRef.current], {
               opacity: 1,

@@ -172,11 +172,11 @@ export default function BestSellersSection() {
                   {product.name}
                 </h4>
                 <p className="text-[#D4A24F] text-sm">
-                  ₹{product.price.toLocaleString()}
+                  ₹{product.basePrice.toLocaleString()}
                 </p>
               </div>
               <button
-                onClick={() => addToCart(product)}
+                onClick={() => addToCart(product, product.sizes[0])}
                 className="w-10 h-10 bg-[#D4A24F] text-[#0B0B0D] flex items-center justify-center hover:bg-[#F4F1EA] transition-colors"
                 aria-label={`Add ${product.name} to cart`}
               >

@@ -2,13 +2,13 @@ import { useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { useCartStore } from '@/store/cartStore';
-import { Plus, Minus, X, Tag, ArrowRight, ShoppingBag, Truck } from 'lucide-react';
+import { Plus, Minus, X, ArrowRight, ShoppingBag, Truck } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function CartPage() {
   const navigate = useNavigate();
-  const { items, updateQuantity, removeFromCart, getSubtotal, getTotal, couponCode, discount, applyCoupon, removeCoupon } = useCartStore();
-  
+  const { items, updateQuantity, removeFromCart, getSubtotal, getTotal } = useCartStore();
+
   const pageRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -25,23 +25,6 @@ export default function CartPage() {
 
     return () => ctx.revert();
   }, []);
-
-  const handleApplyCoupon = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.target as HTMLFormElement;
-    const input = form.elements.namedItem('coupon') as HTMLInputElement;
-    const code = input.value.trim().toUpperCase();
-    
-    if (code) {
-      applyCoupon(code);
-      if (['CLEFEEL10', 'CLEFEEL20', 'WELCOME'].includes(code)) {
-        toast.success(`Coupon ${code} applied!`);
-      } else {
-        toast.error('Invalid coupon code');
-      }
-      input.value = '';
-    }
-  };
 
   if (items.length === 0) {
     return (
@@ -72,7 +55,7 @@ export default function CartPage() {
             <div className="space-y-6">
               {items.map((item) => (
                 <div
-                  key={item.product.id}
+                  key={`${item.product.id}-${item.selectedSize.id}`}
                   className="flex flex-col sm:flex-row gap-6 p-6 bg-[#F4F1EA]/5 border border-[#F4F1EA]/10"
                 >
                   {/* Image */}
@@ -97,38 +80,56 @@ export default function CartPage() {
                         {item.product.name}
                       </Link>
                       <button
-                        onClick={() => removeFromCart(item.product.id)}
+                        onClick={() => {
+                          removeFromCart(item.product.id, item.selectedSize.id);
+                          toast.success('Removed from cart');
+                        }}
                         className="text-[#F4F1EA]/40 hover:text-[#F4F1EA] transition-colors"
                         aria-label="Remove item"
                       >
                         <X className="w-5 h-5" />
                       </button>
                     </div>
-                    
-                    <p className="text-[#F4F1EA]/40 text-sm mb-4">{item.product.size}</p>
-                    
+
+                    <p className="text-[#F4F1EA]/40 text-sm mb-4">Size: {item.selectedSize.sizeName}</p>
+
                     <div className="flex items-center justify-between">
                       {/* Quantity */}
                       <div className="flex items-center border border-[#F4F1EA]/20">
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                          onClick={() => updateQuantity(item.product.id, item.selectedSize.id, item.quantity - 1)}
                           className="p-2 text-[#F4F1EA]/60 hover:text-[#F4F1EA] transition-colors"
+                          disabled={item.quantity <= 1}
                         >
                           <Minus className="w-4 h-4" />
                         </button>
                         <span className="w-10 text-center text-[#F4F1EA]">{item.quantity}</span>
                         <button
-                          onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                          onClick={() => {
+                            if (item.quantity < item.selectedSize.stock) {
+                              updateQuantity(item.product.id, item.selectedSize.id, item.quantity + 1);
+                            } else {
+                              toast.error('Not enough stock available');
+                            }
+                          }}
                           className="p-2 text-[#F4F1EA]/60 hover:text-[#F4F1EA] transition-colors"
+                          disabled={item.quantity >= item.selectedSize.stock}
                         >
                           <Plus className="w-4 h-4" />
                         </button>
                       </div>
 
                       {/* Price */}
-                      <p className="text-[#D4A24F] font-semibold">
-                        ₹{(item.product.price * item.quantity).toLocaleString()}
-                      </p>
+                      <div className="text-right">
+                        <p className="text-[#D4A24F] font-semibold">
+                          ₹{(item.selectedSize.price * item.quantity).toLocaleString()}
+                        </p>
+                        {item.quantity > 1 && (
+                          <p className="text-[#F4F1EA]/40 text-xs mt-1">
+                            ₹{item.selectedSize.price.toLocaleString()} each
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -152,74 +153,26 @@ export default function CartPage() {
                 CART <span className="text-[#D4A24F]">SUMMARY</span>
               </h2>
 
-              {/* Coupon */}
-              {!couponCode ? (
-                <form onSubmit={handleApplyCoupon} className="mb-6">
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#F4F1EA]/40" />
-                      <input
-                        type="text"
-                        name="coupon"
-                        placeholder="Enter coupon code"
-                        className="w-full pl-10 pr-4 py-3 bg-[#0B0B0D] border border-[#F4F1EA]/20 text-[#F4F1EA] text-sm placeholder:text-[#F4F1EA]/30 focus:outline-none focus:border-[#D4A24F] uppercase"
-                      />
-                    </div>
-                    <button
-                      type="submit"
-                      className="px-4 py-3 bg-[#D4A24F] text-[#0B0B0D] text-sm font-semibold uppercase tracking-wider hover:bg-[#F4F1EA] transition-colors"
-                    >
-                      Apply
-                    </button>
-                  </div>
-                  <p className="text-[#F4F1EA]/40 text-xs mt-2">
-                    Try: CLEFEEL10, CLEFEEL20, WELCOME
-                  </p>
-                </form>
-              ) : (
-                <div className="flex items-center justify-between mb-6 p-3 bg-[#D4A24F]/10 border border-[#D4A24F]/30">
-                  <div className="flex items-center gap-2">
-                    <Tag className="w-4 h-4 text-[#D4A24F]" />
-                    <span className="text-[#D4A24F] text-sm font-semibold">{couponCode}</span>
-                  </div>
-                  <button
-                    onClick={removeCoupon}
-                    className="text-[#F4F1EA]/40 hover:text-[#F4F1EA] transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-              )}
-
               {/* Summary Lines */}
-              <div className="space-y-3 mb-6">
+              <div className="space-y-4 mb-6">
                 <div className="flex justify-between text-sm">
                   <span className="text-[#F4F1EA]/60">Subtotal</span>
                   <span className="text-[#F4F1EA]">₹{getSubtotal().toLocaleString()}</span>
                 </div>
-                
-                {discount > 0 && (
-                  <div className="flex justify-between text-sm">
-                    <span className="text-[#F4F1EA]/60">Discount ({Math.round(discount * 100)}%)</span>
-                    <span className="text-[#D4A24F]">
-                      -₹{Math.round(getSubtotal() * discount).toLocaleString()}
-                    </span>
-                  </div>
-                )}
-                
+
                 <div className="flex justify-between text-sm">
                   <span className="text-[#F4F1EA]/60">Shipping</span>
                   <span className="text-[#F4F1EA]">
                     {getSubtotal() >= 4999 ? 'Free' : '₹99'}
                   </span>
                 </div>
-                
+
                 <div className="hairline my-4" />
-                
+
                 <div className="flex justify-between">
-                  <span className="text-[#F4F1EA] font-semibold">Total</span>
+                  <span className="text-[#F4F1EA] font-semibold">Total Tax Included.</span>
                   <span className="text-[#D4A24F] text-xl font-bold">
-                    ₹{(getTotal() + (getSubtotal() >= 4999 ? 0 : 99)).toLocaleString()}
+                    ₹{getTotal().toLocaleString()}
                   </span>
                 </div>
               </div>
