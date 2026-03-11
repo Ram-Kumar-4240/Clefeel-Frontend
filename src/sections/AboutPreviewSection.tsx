@@ -1,4 +1,4 @@
-import { useRef, useLayoutEffect } from 'react';
+import { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
@@ -11,51 +11,56 @@ export default function AboutPreviewSection() {
   const contentRef = useRef<HTMLDivElement>(null);
   const imagesRef = useRef<HTMLDivElement>(null);
 
-  useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      // Content animation
-      gsap.fromTo(
-        contentRef.current,
-        { y: 40, opacity: 0 },
-        {
-          y: 0,
-          opacity: 1,
-          duration: 0.8,
-          ease: 'power3.out',
-          scrollTrigger: {
-            trigger: contentRef.current,
-            start: 'top 80%',
-            toggleActions: 'play none none reverse',
-          },
+  useEffect(() => {
+    // Small delay to ensure DOM is fully ready after navigation
+    const timeout = setTimeout(() => {
+      const ctx = gsap.context(() => {
+        // Content animation
+        gsap.fromTo(
+          contentRef.current,
+          { y: 40, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: contentRef.current,
+              start: 'top 85%',
+              toggleActions: 'play none none none',
+            },
+          }
+        );
+
+        // Images parallax
+        const images = imagesRef.current?.querySelectorAll('.about-image');
+        if (images) {
+          images.forEach((img, index) => {
+            gsap.fromTo(
+              img,
+              { y: 0, opacity: 0, scale: 0.98 },
+              {
+                y: -40 * (index + 1) * 0.5,
+                opacity: 1,
+                scale: 1,
+                duration: 0.8,
+                ease: 'power3.out',
+                scrollTrigger: {
+                  trigger: imagesRef.current,
+                  start: 'top 85%',
+                  end: 'bottom 20%',
+                  scrub: 1,
+                },
+              }
+            );
+          });
         }
-      );
+      }, sectionRef);
 
-      // Images parallax
-      const images = imagesRef.current?.querySelectorAll('.about-image');
-      if (images) {
-        images.forEach((img, index) => {
-          gsap.fromTo(
-            img,
-            { y: 0, opacity: 0, scale: 0.98 },
-            {
-              y: -40 * (index + 1) * 0.5,
-              opacity: 1,
-              scale: 1,
-              duration: 0.8,
-              ease: 'power3.out',
-              scrollTrigger: {
-                trigger: imagesRef.current,
-                start: 'top 80%',
-                end: 'bottom 20%',
-                scrub: 1,
-              },
-            }
-          );
-        });
-      }
-    }, sectionRef);
+      return () => ctx.revert();
+    }, 100);
 
-    return () => ctx.revert();
+    return () => clearTimeout(timeout);
   }, []);
 
   return (
@@ -66,7 +71,7 @@ export default function AboutPreviewSection() {
       <div className="w-full px-6 lg:px-[6vw]">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
           {/* Content */}
-          <div ref={contentRef} style={{ opacity: 0 }}>
+          <div ref={contentRef}>
             <h2
               className="luxury-heading text-[#F4F1EA] mb-6"
               style={{ fontSize: 'clamp(28px, 3.5vw, 56px)' }}
@@ -104,7 +109,6 @@ export default function AboutPreviewSection() {
           <div ref={imagesRef} className="relative h-[500px] hidden lg:block">
             <div
               className="about-image absolute top-0 right-0 w-3/4 aspect-[4/3] overflow-hidden border border-[#F4F1EA]/10"
-              style={{ opacity: 0 }}
             >
               <img
                 src="/about_packaging_1.jpg"
@@ -114,7 +118,6 @@ export default function AboutPreviewSection() {
             </div>
             <div
               className="about-image absolute top-24 left-0 w-2/3 aspect-[4/3] overflow-hidden border border-[#F4F1EA]/10"
-              style={{ opacity: 0 }}
             >
               <img
                 src="/about_packaging_2.jpg"
@@ -124,7 +127,6 @@ export default function AboutPreviewSection() {
             </div>
             <div
               className="about-image absolute bottom-0 right-12 w-1/2 aspect-[4/3] overflow-hidden border border-[#F4F1EA]/10"
-              style={{ opacity: 0 }}
             >
               <img
                 src="/product_macro_bottle.jpg"

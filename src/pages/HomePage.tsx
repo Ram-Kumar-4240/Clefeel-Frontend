@@ -1,7 +1,8 @@
 import { useRef } from 'react';
 import HeroSection from '@/sections/HeroSection';
-import WhyChooseSection from '@/sections/WhyChooseSection';
+import ProductVideoSection from '@/sections/ProductVideoSection';
 import ShopPreviewSection from '@/sections/ShopPreviewSection';
+import WhyChooseSection from '@/sections/WhyChooseSection';
 import AboutPreviewSection from '@/sections/AboutPreviewSection';
 
 export default function HomePage() {
@@ -10,8 +11,9 @@ export default function HomePage() {
   return (
     <div ref={mainRef} className="relative">
       <HeroSection />
-      <WhyChooseSection />
+      <ProductVideoSection />
       <ShopPreviewSection />
+      <WhyChooseSection />
       <AboutPreviewSection />
     </div>
   );

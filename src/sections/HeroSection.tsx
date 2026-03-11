@@ -1,9 +1,6 @@
-import { useEffect, useRef, useLayoutEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { gsap } from 'gsap';
-import { ScrollTrigger } from 'gsap/ScrollTrigger';
-
-gsap.registerPlugin(ScrollTrigger);
 
 export default function HeroSection() {
   const sectionRef = useRef<HTMLDivElement>(null);
@@ -34,7 +31,9 @@ export default function HeroSection() {
         0.4
       );
 
-      // Headline words stagger
+      // Set headline container visible, then stagger words
+      tl.set(headlineRef.current, { opacity: 1 }, 0.5);
+
       const words = headlineRef.current?.querySelectorAll('.word');
       if (words) {
         tl.fromTo(
@@ -65,67 +64,11 @@ export default function HeroSection() {
     return () => ctx.revert();
   }, []);
 
-  // Scroll-driven animation — fixed for large screens
-  useLayoutEffect(() => {
-    const ctx = gsap.context(() => {
-      const scrollTl = gsap.timeline({
-        scrollTrigger: {
-          trigger: sectionRef.current,
-          start: 'top top',
-          end: '+=100%',
-          pin: true,
-          pinSpacing: true,
-          scrub: 1.2,
-          onLeaveBack: () => {
-            gsap.set([labelRef.current, headlineRef.current, subheadlineRef.current, ctaRef.current], {
-              opacity: 1,
-              x: 0,
-            });
-            gsap.set(bgRef.current, { scale: 1, opacity: 1 });
-          },
-        },
-      });
-
-      // Phase 1: ENTRANCE (0-30%) - subtle background scale
-      scrollTl.fromTo(
-        bgRef.current,
-        { scale: 1 },
-        { scale: 1.02, ease: 'none' },
-        0
-      );
-
-      // Phase 2: SETTLE (30-70%) - hold
-
-      // Phase 3: EXIT (70-100%)
-      scrollTl.fromTo(
-        headlineRef.current,
-        { x: 0, opacity: 1 },
-        { x: '-22vw', opacity: 0, ease: 'power2.in' },
-        0.7
-      );
-
-      scrollTl.fromTo(
-        [labelRef.current, subheadlineRef.current, ctaRef.current],
-        { x: 0, opacity: 1 },
-        { x: '-10vw', opacity: 0, ease: 'power2.in' },
-        0.72
-      );
-
-      scrollTl.fromTo(
-        bgRef.current,
-        { scale: 1.02, opacity: 1 },
-        { scale: 1.08, opacity: 0.85, ease: 'power2.in' },
-        0.7
-      );
-    }, sectionRef);
-
-    return () => ctx.revert();
-  }, []);
-
   return (
     <section
       ref={sectionRef}
-      className="section-pinned bg-[#0B0B0D] z-10"
+      className="relative w-screen overflow-hidden bg-[#0B0B0D] z-10"
+      style={{ height: '100dvh' }}
     >
       {/* Background Image */}
       <div
