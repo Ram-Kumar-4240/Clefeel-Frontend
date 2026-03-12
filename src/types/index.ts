@@ -2,6 +2,7 @@ export interface ProductSize {
   id: string;
   sizeName: string;
   price: number;
+  mrp: number;
   stock: number;
 }
 
@@ -16,6 +17,7 @@ export interface Product {
   name: string;
   description: string;
   basePrice: number;
+  baseMrp: number;
   category: string;
   status: 'active' | 'inactive';
   images: ProductImage[];

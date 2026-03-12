@@ -1,7 +1,7 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect } from 'react';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
-import { Play, Pause, Volume2, VolumeX } from 'lucide-react';
+import { Sparkles, Gem, FlaskConical } from 'lucide-react';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -11,22 +11,22 @@ export default function ProductVideoSection() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const textBlockRef = useRef<HTMLDivElement>(null);
   const accentLineRef = useRef<HTMLDivElement>(null);
-
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isMuted, setIsMuted] = useState(true);
+  const detailCardsRef = useRef<HTMLDivElement>(null);
 
   // GSAP scroll reveal
   useEffect(() => {
     const ctx = gsap.context(() => {
-      // Text block slides in from left
+      // Text block slides in from left with stagger
       if (textBlockRef.current) {
+        const children = textBlockRef.current.children;
         gsap.fromTo(
-          textBlockRef.current,
-          { x: -60, opacity: 0 },
+          Array.from(children),
+          { x: -50, opacity: 0 },
           {
             x: 0,
             opacity: 1,
             duration: 1,
+            stagger: 0.15,
             ease: 'power4.out',
             scrollTrigger: {
               trigger: sectionRef.current,
@@ -44,8 +44,8 @@ export default function ProductVideoSection() {
           { scaleY: 0 },
           {
             scaleY: 1,
-            duration: 0.8,
-            ease: 'power3.out',
+            duration: 1,
+            ease: 'power4.out',
             scrollTrigger: {
               trigger: sectionRef.current,
               start: 'top 70%',
@@ -63,11 +63,31 @@ export default function ProductVideoSection() {
           {
             clipPath: 'inset(0 0% 0 0)',
             opacity: 1,
-            duration: 1.3,
-            ease: 'power3.inOut',
+            duration: 1.4,
+            ease: 'power4.inOut',
             scrollTrigger: {
               trigger: sectionRef.current,
               start: 'top 70%',
+              toggleActions: 'play none none none',
+            },
+          }
+        );
+      }
+
+      // Detail cards stagger in
+      if (detailCardsRef.current) {
+        gsap.fromTo(
+          Array.from(detailCardsRef.current.children),
+          { y: 30, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            stagger: 0.12,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: detailCardsRef.current,
+              start: 'top 85%',
               toggleActions: 'play none none none',
             },
           }
@@ -78,7 +98,7 @@ export default function ProductVideoSection() {
     return () => ctx.revert();
   }, []);
 
-  // Auto-play/pause based on viewport
+  // Auto-play/pause based on viewport (always plays when visible)
   useEffect(() => {
     if (!videoRef.current || !sectionRef.current) return;
 
@@ -87,10 +107,8 @@ export default function ProductVideoSection() {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             videoRef.current?.play().catch(() => {});
-            setIsPlaying(true);
           } else {
             videoRef.current?.pause();
-            setIsPlaying(false);
           }
         });
       },
@@ -100,23 +118,6 @@ export default function ProductVideoSection() {
     observer.observe(sectionRef.current);
     return () => observer.disconnect();
   }, []);
-
-  const togglePlay = () => {
-    if (!videoRef.current) return;
-    if (videoRef.current.paused) {
-      videoRef.current.play().catch(() => {});
-      setIsPlaying(true);
-    } else {
-      videoRef.current.pause();
-      setIsPlaying(false);
-    }
-  };
-
-  const toggleMute = () => {
-    if (!videoRef.current) return;
-    videoRef.current.muted = !videoRef.current.muted;
-    setIsMuted(!isMuted);
-  };
 
   return (
     <section
@@ -132,13 +133,19 @@ export default function ProductVideoSection() {
             background: 'radial-gradient(circle, rgba(212,162,79,0.06) 0%, transparent 60%)',
           }}
         />
+        <div
+          className="absolute -bottom-40 -left-40 w-[400px] h-[400px] rounded-full"
+          style={{
+            background: 'radial-gradient(circle, rgba(212,162,79,0.04) 0%, transparent 60%)',
+          }}
+        />
       </div>
 
       {/* Main layout — asymmetric split */}
       <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 min-h-[70vh] lg:min-h-[85vh]">
         {/* Left text panel — 4 cols */}
         <div className="lg:col-span-4 flex flex-col justify-center px-6 lg:pl-[6vw] lg:pr-12 py-20 lg:py-0 order-2 lg:order-1">
-          <div ref={textBlockRef} style={{ opacity: 0 }}>
+          <div ref={textBlockRef}>
             {/* Label */}
             <div className="inline-flex items-center gap-3 mb-8">
               <div
@@ -168,64 +175,63 @@ export default function ProductVideoSection() {
             </h2>
 
             {/* Description */}
-            <p className="text-[#F4F1EA]/45 text-sm lg:text-base leading-relaxed mb-10 max-w-sm">
+            <p className="text-[#F4F1EA]/45 text-sm lg:text-base leading-relaxed mb-8 max-w-sm">
               Experience the craftsmanship behind every CLEFEEL bottle — 
-              luxury distilled into 8 seconds of pure artistry.
+              luxury distilled into pure artistry.
             </p>
 
-            {/* Controls row */}
-            <div className="flex items-center gap-4">
-              <button
-                onClick={togglePlay}
-                className="group flex items-center gap-3 transition-all duration-300"
-              >
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center transition-all duration-500 group-hover:scale-110"
-                  style={{
-                    background: isPlaying
-                      ? 'rgba(212,162,79,0.15)'
-                      : 'linear-gradient(135deg, #D4A24F, #F4D58D)',
-                    border: isPlaying ? '1px solid rgba(212,162,79,0.4)' : 'none',
-                    boxShadow: isPlaying ? 'none' : '0 0 30px rgba(212,162,79,0.2)',
-                  }}
-                >
-                  {isPlaying ? (
-                    <Pause className="w-4 h-4 text-[#D4A24F]" />
-                  ) : (
-                    <Play className="w-4 h-4 text-[#0B0B0D] ml-0.5" fill="#0B0B0D" />
-                  )}
-                </div>
-                <span className="text-[#F4F1EA]/50 text-xs tracking-wider uppercase hidden sm:inline">
-                  {isPlaying ? 'Pause' : 'Watch Film'}
-                </span>
-              </button>
-
-              <button
-                onClick={toggleMute}
-                className="w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 hover:bg-[#D4A24F]/10"
+            {/* Brand detail cards */}
+            <div ref={detailCardsRef} className="flex flex-col gap-4">
+              <div className="flex items-center gap-4 px-4 py-3 rounded-sm"
                 style={{
-                  background: 'rgba(244,241,234,0.05)',
-                  border: '1px solid rgba(244,241,234,0.08)',
+                  background: 'rgba(244,241,234,0.03)',
+                  border: '1px solid rgba(244,241,234,0.06)',
                 }}
-                aria-label={isMuted ? 'Unmute' : 'Mute'}
               >
-                {isMuted ? (
-                  <VolumeX className="w-3.5 h-3.5 text-[#F4F1EA]/40" />
-                ) : (
-                  <Volume2 className="w-3.5 h-3.5 text-[#D4A24F]" />
-                )}
-              </button>
-            </div>
+                <div className="w-9 h-9 rounded-full flex items-center justify-center"
+                  style={{ background: 'rgba(212,162,79,0.12)' }}
+                >
+                  <FlaskConical className="w-4 h-4 text-[#D4A24F]" />
+                </div>
+                <div>
+                  <p className="text-[#F4F1EA]/80 text-sm font-semibold">Eau de Parfum</p>
+                  <p className="text-[#F4F1EA]/30 text-[11px]">20-25% concentration</p>
+                </div>
+              </div>
 
-            {/* Duration badge */}
-            <div className="mt-8 inline-flex items-center gap-2 px-3 py-1.5 rounded-full"
-              style={{
-                background: 'rgba(244,241,234,0.04)',
-                border: '1px solid rgba(244,241,234,0.06)',
-              }}
-            >
-              <div className="w-1.5 h-1.5 rounded-full bg-[#D4A24F] animate-pulse" />
-              <span className="text-[#F4F1EA]/30 text-[10px] tracking-wider uppercase">0:08</span>
+              <div className="flex items-center gap-4 px-4 py-3 rounded-sm"
+                style={{
+                  background: 'rgba(244,241,234,0.03)',
+                  border: '1px solid rgba(244,241,234,0.06)',
+                }}
+              >
+                <div className="w-9 h-9 rounded-full flex items-center justify-center"
+                  style={{ background: 'rgba(212,162,79,0.12)' }}
+                >
+                  <Gem className="w-4 h-4 text-[#D4A24F]" />
+                </div>
+                <div>
+                  <p className="text-[#F4F1EA]/80 text-sm font-semibold">Handcrafted</p>
+                  <p className="text-[#F4F1EA]/30 text-[11px]">Small batch luxury</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4 px-4 py-3 rounded-sm"
+                style={{
+                  background: 'rgba(244,241,234,0.03)',
+                  border: '1px solid rgba(244,241,234,0.06)',
+                }}
+              >
+                <div className="w-9 h-9 rounded-full flex items-center justify-center"
+                  style={{ background: 'rgba(212,162,79,0.12)' }}
+                >
+                  <Sparkles className="w-4 h-4 text-[#D4A24F]" />
+                </div>
+                <div>
+                  <p className="text-[#F4F1EA]/80 text-sm font-semibold">Premium Ingredients</p>
+                  <p className="text-[#F4F1EA]/30 text-[11px]">Sourced from France & Middle East</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -246,9 +252,8 @@ export default function ProductVideoSection() {
         <div className="lg:col-span-7 relative order-1 lg:order-3">
           <div
             ref={videoWrapperRef}
-            className="relative w-full h-[50vh] lg:h-full cursor-pointer group"
+            className="relative w-full h-[50vh] lg:h-full"
             style={{ opacity: 0, clipPath: 'inset(0 100% 0 0)' }}
-            onClick={togglePlay}
           >
             <video
               ref={videoRef}
@@ -257,6 +262,7 @@ export default function ProductVideoSection() {
               loop
               muted
               playsInline
+              autoPlay
               preload="metadata"
               poster="/hero_perfume_fabric.jpg"
             />
@@ -276,36 +282,6 @@ export default function ProductVideoSection() {
                 background: 'linear-gradient(to top, rgba(11,11,13,0.5) 0%, transparent 30%)',
               }}
             />
-
-            {/* Center play overlay (when paused) */}
-            {!isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div
-                  className="w-20 h-20 rounded-full flex items-center justify-center backdrop-blur-sm transition-transform duration-500 group-hover:scale-110"
-                  style={{
-                    background: 'rgba(212,162,79,0.85)',
-                    boxShadow: '0 0 80px rgba(212,162,79,0.25)',
-                  }}
-                >
-                  <Play className="w-8 h-8 text-[#0B0B0D] ml-1" fill="#0B0B0D" />
-                </div>
-              </div>
-            )}
-
-            {/* Hover pause indicator (when playing) */}
-            {isPlaying && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center backdrop-blur-sm"
-                  style={{
-                    background: 'rgba(11,11,13,0.6)',
-                    border: '1px solid rgba(212,162,79,0.3)',
-                  }}
-                >
-                  <Pause className="w-5 h-5 text-[#D4A24F]" />
-                </div>
-              </div>
-            )}
 
             {/* Bottom shimmer */}
             <div className="absolute bottom-0 left-0 right-0 h-[1px] z-20 overflow-hidden">

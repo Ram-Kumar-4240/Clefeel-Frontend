@@ -164,9 +164,16 @@ export default function ShopPreviewSection() {
                       </h3>
                       <p className="text-[#F4F1EA]/40 text-sm">{product.category}</p>
                     </div>
-                    <p className="text-[#D4A24F] font-medium tracking-wide">
-                      ₹{product.basePrice.toLocaleString()}
-                    </p>
+                    <div className="text-right">
+                      <p className="text-[#D4A24F] font-medium tracking-wide">
+                        ₹{product.basePrice.toLocaleString()}
+                      </p>
+                      {product.baseMrp > product.basePrice && (
+                        <p className="text-[#F4F1EA]/30 text-xs line-through">
+                          ₹{product.baseMrp.toLocaleString()}
+                        </p>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

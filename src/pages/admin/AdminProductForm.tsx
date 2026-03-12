@@ -10,6 +10,7 @@ const defaultProduct: Partial<Product> = {
     name: '',
     description: '',
     basePrice: 0,
+    baseMrp: 0,
     category: '',
     status: 'active',
     images: [],
@@ -55,7 +56,7 @@ export default function AdminProductForm() {
         if (type === 'checkbox') {
             const checked = (e.target as HTMLInputElement).checked;
             setFormData({ ...formData, [name]: checked });
-        } else if (name === 'basePrice') {
+        } else if (name === 'basePrice' || name === 'baseMrp') {
             setFormData({ ...formData, [name]: Number(value) });
         } else {
             setFormData({ ...formData, [name]: value });
@@ -71,7 +72,7 @@ export default function AdminProductForm() {
     const addSize = () => {
         setFormData({
             ...formData,
-            sizes: [...(formData.sizes || []), { id: `size-${Date.now()}`, sizeName: '', price: 0, stock: 0 }]
+            sizes: [...(formData.sizes || []), { id: `size-${Date.now()}`, sizeName: '', price: 0, mrp: 0, stock: 0 }]
         });
     };
 
@@ -194,7 +195,7 @@ export default function AdminProductForm() {
                             />
                         </div>
                         <div>
-                            <label className="luxury-label text-[#F4F1EA]/40 mb-2 block">Base Price (₹) *</label>
+                            <label className="luxury-label text-[#F4F1EA]/40 mb-2 block">Base Selling Price (₹) *</label>
                             <input
                                 type="number"
                                 name="basePrice"
@@ -203,6 +204,19 @@ export default function AdminProductForm() {
                                 required
                                 min="0"
                                 className="w-full px-4 py-3 bg-[#0B0B0D] border border-[#F4F1EA]/20 text-[#F4F1EA] focus:outline-none focus:border-[#D4A24F] transition-colors"
+                            />
+                        </div>
+                        <div>
+                            <label className="luxury-label text-[#F4F1EA]/40 mb-2 block">Base MRP (₹) *</label>
+                            <input
+                                type="number"
+                                name="baseMrp"
+                                value={formData.baseMrp || 0}
+                                onChange={handleChange}
+                                required
+                                min="0"
+                                className="w-full px-4 py-3 bg-[#0B0B0D] border border-[#F4F1EA]/20 text-[#F4F1EA] focus:outline-none focus:border-[#D4A24F] transition-colors"
+                                placeholder="Original MRP before discount"
                             />
                         </div>
                         <div>
@@ -373,7 +387,19 @@ export default function AdminProductForm() {
                                     />
                                 </div>
                                 <div className="flex-1 w-full">
-                                    <label className="luxury-label text-[#F4F1EA]/40 mb-2 block">Price (₹) *</label>
+                                    <label className="luxury-label text-[#F4F1EA]/40 mb-2 block">MRP (₹) *</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        min="0"
+                                        value={size.mrp}
+                                        onChange={(e) => updateSize(index, 'mrp', Number(e.target.value))}
+                                        placeholder="Original MRP"
+                                        className="w-full px-4 py-3 bg-[#0B0B0D] border border-[#F4F1EA]/20 text-[#F4F1EA] focus:outline-none focus:border-[#D4A24F] transition-colors"
+                                    />
+                                </div>
+                                <div className="flex-1 w-full">
+                                    <label className="luxury-label text-[#F4F1EA]/40 mb-2 block">Selling Price (₹) *</label>
                                     <input
                                         type="number"
                                         required

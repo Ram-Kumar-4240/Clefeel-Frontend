@@ -173,6 +173,11 @@ export default function BestSellersSection() {
                 </h4>
                 <p className="text-[#D4A24F] text-sm">
                   ₹{product.basePrice.toLocaleString()}
+                  {product.baseMrp > product.basePrice && (
+                    <span className="text-[#F4F1EA]/30 text-xs line-through ml-2">
+                      ₹{product.baseMrp.toLocaleString()}
+                    </span>
+                  )}
                 </p>
               </div>
               <button

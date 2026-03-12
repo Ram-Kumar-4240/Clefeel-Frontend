@@ -1,4 +1,5 @@
 import { products as localProducts, whyChooseFeatures as localFeatures } from '@/data/products';
+import { useProductStore } from '@/store/productStore';
 import type { Product } from '@/types';
 
 const API_BASE = import.meta.env.VITE_API_URL || '';
@@ -10,7 +11,15 @@ export interface WhyChooseFeature {
 }
 
 /**
- * Fetch products from API, falls back to local data when no backend is configured.
+ * Helper: get products from the Zustand store (localStorage-persisted).
+ * Used as the local fallback when no backend is configured.
+ */
+function getLocalProducts(): Product[] {
+    return useProductStore.getState().products;
+}
+
+/**
+ * Fetch products from API, falls back to local store data when no backend is configured.
  */
 export async function fetchProducts(category?: string): Promise<Product[]> {
     if (API_BASE) {
@@ -25,8 +34,9 @@ export async function fetchProducts(category?: string): Promise<Product[]> {
             console.warn('API fetch failed, using local data:', err);
         }
     }
-    // Fallback: local data
-    const active = localProducts.filter((p) => p.status === 'active');
+    // Fallback: local store data
+    const all = getLocalProducts();
+    const active = all.filter((p) => p.status === 'active');
     return category ? active.filter((p) => p.category === category) : active;
 }
 
@@ -43,7 +53,7 @@ export async function fetchProductById(id: string): Promise<Product | null> {
             console.warn('API fetch failed, using local data:', err);
         }
     }
-    return localProducts.find((p) => p.id === id) || null;
+    return getLocalProducts().find((p) => p.id === id) || null;
 }
 
 /**
@@ -66,8 +76,9 @@ export async function fetchSimilarProducts(
         }
     }
     // Fallback: local price-range logic
+    const allProducts = getLocalProducts();
     const range = basePrice * 0.3; // ±30% price range
-    return localProducts
+    return allProducts
         .filter((p) => p.id !== currentProductId && p.status === 'active')
         .filter((p) => Math.abs(p.basePrice - basePrice) <= range)
         .sort((a, b) => Math.abs(a.basePrice - basePrice) - Math.abs(b.basePrice - basePrice))
@@ -136,7 +147,7 @@ export async function verifyPayment(paymentData: {
  * Admin: Fetch all products (including inactive)
  */
 export async function adminFetchProducts(token: string): Promise<Product[]> {
-    if (!API_BASE) return localProducts;
+    if (!API_BASE) return getLocalProducts();
     const res = await fetch(`${API_BASE}/api/admin/products`, {
         headers: { Authorization: `Bearer ${token}` },
     });
@@ -145,7 +156,7 @@ export async function adminFetchProducts(token: string): Promise<Product[]> {
 }
 
 /**
- * Admin: Create/Update product
+ * Admin: Create/Update product — persists locally via productStore when no backend
  */
 export async function adminSaveProduct(
     product: Partial<Product>,
@@ -153,7 +164,18 @@ export async function adminSaveProduct(
     isNew = false
 ) {
     if (!API_BASE) {
-        return { success: true, data: { ...product, id: product.id || Date.now().toString() } };
+        const store = useProductStore.getState();
+        if (isNew) {
+            const newProduct: Product = {
+                ...product,
+                id: product.id || `product-${Date.now()}`,
+            } as Product;
+            store.addProduct(newProduct);
+            return { success: true, data: newProduct };
+        } else {
+            store.updateProduct(product.id!, product);
+            return { success: true, data: product };
+        }
     }
     const url = isNew
         ? `${API_BASE}/api/admin/products`
@@ -170,10 +192,13 @@ export async function adminSaveProduct(
 }
 
 /**
- * Admin: Delete product
+ * Admin: Delete product — removes from store when no backend
  */
 export async function adminDeleteProduct(productId: string, token: string) {
-    if (!API_BASE) return { success: true };
+    if (!API_BASE) {
+        useProductStore.getState().deleteProduct(productId);
+        return { success: true };
+    }
     const res = await fetch(`${API_BASE}/api/admin/products/${productId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },

@@ -122,6 +122,11 @@ export default function WishlistPage() {
                                     </p>
                                     <p className="text-[#D4A24F] font-semibold">
                                         ₹{product.basePrice.toLocaleString()}
+                                        {product.baseMrp > product.basePrice && (
+                                            <span className="text-[#F4F1EA]/30 font-normal text-xs line-through ml-2">
+                                                ₹{product.baseMrp.toLocaleString()}
+                                            </span>
+                                        )}
                                     </p>
                                 </div>
                             </div>

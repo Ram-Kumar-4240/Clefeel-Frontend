@@ -314,6 +314,11 @@ export default function ShopPage() {
                     )}
                     <p className="text-[#D4A24F] font-semibold">
                       ₹{product.basePrice.toLocaleString()}
+                      {product.baseMrp > product.basePrice && (
+                        <span className="text-[#F4F1EA]/30 font-normal text-xs line-through ml-2">
+                          ₹{product.baseMrp.toLocaleString()}
+                        </span>
+                      )}
                       {defaultSize && product.sizes.length > 1 && (
                         <span className="text-[#F4F1EA]/30 font-normal text-xs ml-2">onwards</span>
                       )}
