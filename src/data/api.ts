@@ -1,4 +1,4 @@
-import { products as localProducts, whyChooseFeatures as localFeatures } from '@/data/products';
+import { whyChooseFeatures as localFeatures } from '@/data/products';
 import { useProductStore } from '@/store/productStore';
 import type { Product } from '@/types';
 
@@ -12,14 +12,13 @@ export interface WhyChooseFeature {
 
 /**
  * Helper: get products from the Zustand store (localStorage-persisted).
- * Used as the local fallback when no backend is configured.
  */
 function getLocalProducts(): Product[] {
     return useProductStore.getState().products;
 }
 
 /**
- * Fetch products from API, falls back to local store data when no backend is configured.
+ * Fetch products from API, falls back to local store data.
  */
 export async function fetchProducts(category?: string): Promise<Product[]> {
     if (API_BASE) {
@@ -34,7 +33,6 @@ export async function fetchProducts(category?: string): Promise<Product[]> {
             console.warn('API fetch failed, using local data:', err);
         }
     }
-    // Fallback: local store data
     const all = getLocalProducts();
     const active = all.filter((p) => p.status === 'active');
     return category ? active.filter((p) => p.category === category) : active;
@@ -57,7 +55,7 @@ export async function fetchProductById(id: string): Promise<Product | null> {
 }
 
 /**
- * Fetch "You May Also Like" products by price range
+ * Fetch similar products by price range
  */
 export async function fetchSimilarProducts(
     currentProductId: string,
@@ -75,9 +73,8 @@ export async function fetchSimilarProducts(
             console.warn('API fetch failed, using local data:', err);
         }
     }
-    // Fallback: local price-range logic
     const allProducts = getLocalProducts();
-    const range = basePrice * 0.3; // ±30% price range
+    const range = basePrice * 0.3;
     return allProducts
         .filter((p) => p.id !== currentProductId && p.status === 'active')
         .filter((p) => Math.abs(p.basePrice - basePrice) <= range)
@@ -106,12 +103,11 @@ export async function fetchWhyChooseFeatures(): Promise<WhyChooseFeature[]> {
  */
 export async function createRazorpayOrder(amount: number, currency = 'INR') {
     if (!API_BASE) {
-        // Mock order for frontend-only deployment
         return {
             success: true,
             data: {
                 orderId: `order_mock_${Date.now()}`,
-                amount: amount * 100, // Razorpay uses paise
+                amount: amount * 100,
                 currency,
             },
         };
@@ -125,7 +121,35 @@ export async function createRazorpayOrder(amount: number, currency = 'INR') {
 }
 
 /**
- * Verify Razorpay payment
+ * Verify payment AND create order atomically in one backend call.
+ * This is the preferred method after Razorpay payment success.
+ */
+export async function verifyAndCreateOrder(data: {
+    razorpay_order_id: string;
+    razorpay_payment_id: string;
+    razorpay_signature: string;
+    items: Array<{ productId: string; sizeName: string; price: number; quantity: number }>;
+    totalAmount: number;
+    address: any;
+    userId?: string;
+}) {
+    if (!API_BASE) {
+        // Offline fallback
+        return { success: true, data: { id: `order_${Date.now()}`, ...data } };
+    }
+    console.log('[API] verifyAndCreateOrder called with', data.items.length, 'items, total ₹', data.totalAmount);
+    const res = await fetch(`${API_BASE}/api/payment/verify-and-create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    const json = await res.json();
+    console.log('[API] verifyAndCreateOrder response:', res.status, json);
+    return json;
+}
+
+/**
+ * Verify Razorpay payment (legacy — use verifyAndCreateOrder instead)
  */
 export async function verifyPayment(paymentData: {
     razorpay_order_id: string;
@@ -144,7 +168,56 @@ export async function verifyPayment(paymentData: {
 }
 
 /**
- * Admin: Fetch all products (including inactive)
+ * Create order in database (legacy — use verifyAndCreateOrder instead)
+ */
+export async function createOrder(orderData: {
+    items: Array<{ productId: string; sizeName: string; price: number; quantity: number }>;
+    totalAmount: number;
+    address: any;
+    userId?: string;
+    razorpayOrderId?: string;
+    razorpayPaymentId?: string;
+}) {
+    if (!API_BASE) {
+        return { success: true, data: { id: `order_${Date.now()}`, ...orderData } };
+    }
+    const res = await fetch(`${API_BASE}/api/orders/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(orderData),
+    });
+    return res.json();
+}
+
+/**
+ * Upload image to Cloudinary via backend
+ */
+export async function uploadImage(file: File, token: string): Promise<{ url: string; publicId: string } | null> {
+    if (!API_BASE) {
+        console.error('[Upload] No API_BASE configured');
+        return null;
+    }
+    const formData = new FormData();
+    formData.append('image', file);
+    try {
+        console.log('[Upload] Sending to:', `${API_BASE}/api/upload`, 'File:', file.name, file.size, 'bytes');
+        const res = await fetch(`${API_BASE}/api/upload`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${token}` },
+            body: formData,
+        });
+        const data = await res.json();
+        console.log('[Upload] Response:', res.status, data);
+        if (data.success) return data.data;
+        console.error('[Upload] Server error:', data.message);
+    } catch (err) {
+        console.error('[Upload] Fetch failed:', err);
+    }
+    return null;
+}
+
+/**
+ * Admin: Fetch all products
  */
 export async function adminFetchProducts(token: string): Promise<Product[]> {
     if (!API_BASE) return getLocalProducts();
@@ -156,7 +229,7 @@ export async function adminFetchProducts(token: string): Promise<Product[]> {
 }
 
 /**
- * Admin: Create/Update product — persists locally via productStore when no backend
+ * Admin: Create/Update product
  */
 export async function adminSaveProduct(
     product: Partial<Product>,
@@ -192,7 +265,7 @@ export async function adminSaveProduct(
 }
 
 /**
- * Admin: Delete product — removes from store when no backend
+ * Admin: Delete product
  */
 export async function adminDeleteProduct(productId: string, token: string) {
     if (!API_BASE) {

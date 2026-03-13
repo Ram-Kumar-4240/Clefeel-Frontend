@@ -19,6 +19,8 @@ const AboutPage = lazy(() => import('@/pages/AboutPage'));
 const ContactPage = lazy(() => import('@/pages/ContactPage'));
 const PolicyPage = lazy(() => import('@/pages/PolicyPage'));
 const WishlistPage = lazy(() => import('@/pages/WishlistPage'));
+const VerifyEmailPage = lazy(() => import('@/pages/VerifyEmailPage'));
+const ResetPasswordPage = lazy(() => import('@/pages/ResetPasswordPage'));
 
 // Admin pages
 const AdminLayout = lazy(() => import('@/pages/admin/AdminLayout'));
@@ -69,6 +71,21 @@ function ScrollToTop() {
   return null;
 }
 
+// Conditionally hide Navigation and Footer on admin routes
+function ConditionalNav() {
+  const { pathname } = useLocation();
+  const isAdmin = pathname.startsWith('/admin');
+  if (isAdmin) return null;
+  return <Navigation />;
+}
+
+function ConditionalFooter() {
+  const { pathname } = useLocation();
+  const isAdmin = pathname.startsWith('/admin');
+  if (isAdmin) return null;
+  return <Footer />;
+}
+
 function App() {
   useEffect(() => {
     // Disable scroll restoration globally
@@ -87,8 +104,8 @@ function App() {
         {/* Vignette */}
         <div className="vignette" />
 
-        {/* Navigation */}
-        <Navigation />
+        {/* Navigation — hidden on admin routes */}
+        <ConditionalNav />
 
         {/* Main content */}
         <main>
@@ -105,6 +122,8 @@ function App() {
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/policies/:type" element={<PolicyPage />} />
               <Route path="/wishlist" element={<WishlistPage />} />
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
 
               {/* Admin Routes */}
               <Route path="/admin" element={<AdminLayout />}>
@@ -119,8 +138,8 @@ function App() {
           </Suspense>
         </main>
 
-        {/* Footer */}
-        <Footer />
+        {/* Footer — hidden on admin routes */}
+        <ConditionalFooter />
       </div>
     </Router>
   );

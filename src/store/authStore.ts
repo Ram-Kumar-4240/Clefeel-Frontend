@@ -7,27 +7,36 @@ interface AuthState {
     tokens: AuthTokens | null;
     isLoggedIn: boolean;
     isLoading: boolean;
+    registrationEmail: string | null; // Track email after registration for verification message
 
     // Auth actions
-    login: (email: string, password: string) => Promise<boolean>;
-    register: (data: { fullName: string; email: string; phone: string; password: string }) => Promise<boolean>;
+    login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>;
+    register: (data: { fullName: string; email: string; phone: string; password: string }) => Promise<{ success: boolean; message?: string }>;
     logout: () => void;
     forgotPassword: (email: string) => Promise<boolean>;
     verifyEmail: (token: string) => Promise<boolean>;
+    resetPassword: (token: string, password: string) => Promise<boolean>;
+    resendVerification: () => Promise<boolean>;
 
-    // Profile actions
-    updateProfile: (data: Partial<User>) => void;
-    addAddress: (address: Address) => void;
-    removeAddress: (addressId: string) => void;
-    addOrder: (order: Order) => void;
-    updateOrderStatus: (orderId: string, status: Order['orderStatus']) => void;
+    // Profile actions (API-backed)
+    updateProfile: (data: Partial<User>) => Promise<void>;
+    addAddress: (address: Address) => Promise<void>;
+    removeAddress: (addressId: string) => Promise<void>;
+    fetchMyOrders: () => Promise<Order[]>;
 
-    // Direct set for mock/local usage
+    // Direct set for local usage
     setUser: (user: User) => void;
+    clearRegistrationEmail: () => void;
 }
 
-// TODO: Replace with real API calls when backend is connected
 const API_BASE = import.meta.env.VITE_API_URL || '';
+
+function authHeaders(token?: string) {
+    return {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+}
 
 export const useAuthStore = create<AuthState>()(
     persist(
@@ -36,6 +45,7 @@ export const useAuthStore = create<AuthState>()(
             tokens: null,
             isLoggedIn: false,
             isLoading: false,
+            registrationEmail: null,
 
             login: async (email, password) => {
                 set({ isLoading: true });
@@ -54,45 +64,26 @@ export const useAuthStore = create<AuthState>()(
                                 isLoggedIn: true,
                                 isLoading: false,
                             });
-                            return true;
+                            return { success: true };
                         }
                         set({ isLoading: false });
-                        return false;
+                        return { success: false, message: data.message || 'Login failed' };
                     }
 
-                    // Local mock login
-                    // Default admin account
+                    // Local mock login (fallback only when no API)
                     if (email === 'admin@clefeel.com' && password === 'admin123') {
                         const adminUser: User = {
-                            id: 'admin-1',
-                            fullName: 'CLEFEEL Admin',
-                            email: 'admin@clefeel.com',
-                            phone: '',
-                            isVerified: true,
-                            addresses: [],
-                            orders: [],
-                            role: 'admin',
+                            id: 'admin-1', fullName: 'CLEFEEL Admin', email: 'admin@clefeel.com',
+                            phone: '', isVerified: true, addresses: [], orders: [], role: 'admin',
                         };
                         set({ user: adminUser, isLoggedIn: true, isLoading: false });
-                        return true;
+                        return { success: true };
                     }
-
-                    // Regular user mock login
-                    const mockUser: User = {
-                        id: 'user-1',
-                        fullName: email.split('@')[0],
-                        email,
-                        phone: '',
-                        isVerified: true,
-                        addresses: [],
-                        orders: [],
-                        role: 'user',
-                    };
-                    set({ user: mockUser, isLoggedIn: true, isLoading: false });
-                    return true;
+                    set({ isLoading: false });
+                    return { success: false, message: 'Invalid credentials' };
                 } catch {
                     set({ isLoading: false });
-                    return false;
+                    return { success: false, message: 'Network error' };
                 }
             },
 
@@ -106,35 +97,26 @@ export const useAuthStore = create<AuthState>()(
                             body: JSON.stringify(data),
                         });
                         const result = await res.json();
-                        if (result.success) {
-                            set({ isLoading: false });
-                            return true;
-                        }
                         set({ isLoading: false });
-                        return false;
+                        if (result.success) {
+                            // Don't log in — user needs to verify email first
+                            set({ registrationEmail: data.email });
+                            return { success: true, message: result.message || 'Check your email for verification link' };
+                        }
+                        return { success: false, message: result.message || 'Registration failed' };
                     }
 
-                    // Local mock register
-                    const mockUser: User = {
-                        id: Date.now().toString(),
-                        fullName: data.fullName,
-                        email: data.email,
-                        phone: data.phone,
-                        isVerified: false,
-                        addresses: [],
-                        orders: [],
-                        role: 'user',
-                    };
-                    set({ user: mockUser, isLoggedIn: true, isLoading: false });
-                    return true;
+                    // Local mock
+                    set({ registrationEmail: data.email, isLoading: false });
+                    return { success: true, message: 'Check your email for verification link' };
                 } catch {
                     set({ isLoading: false });
-                    return false;
+                    return { success: false, message: 'Network error' };
                 }
             },
 
             logout: () => {
-                set({ user: null, tokens: null, isLoggedIn: false });
+                set({ user: null, tokens: null, isLoggedIn: false, registrationEmail: null });
             },
 
             forgotPassword: async (email) => {
@@ -148,7 +130,7 @@ export const useAuthStore = create<AuthState>()(
                         const data = await res.json();
                         return data.success;
                     }
-                    return true; // Mock success
+                    return true;
                 } catch {
                     return false;
                 }
@@ -166,22 +148,95 @@ export const useAuthStore = create<AuthState>()(
                         }
                         return data.success;
                     }
-                    set((state) => ({
-                        user: state.user ? { ...state.user, isVerified: true } : null,
-                    }));
                     return true;
                 } catch {
                     return false;
                 }
             },
 
-            updateProfile: (data) => {
+            resetPassword: async (token, password) => {
+                try {
+                    if (API_BASE) {
+                        const res = await fetch(`${API_BASE}/api/auth/reset-password`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ token, password }),
+                        });
+                        const data = await res.json();
+                        return data.success;
+                    }
+                    return true;
+                } catch {
+                    return false;
+                }
+            },
+
+            resendVerification: async () => {
+                try {
+                    const { tokens } = get();
+                    if (API_BASE && tokens) {
+                        const res = await fetch(`${API_BASE}/api/auth/resend-verification`, {
+                            method: 'POST',
+                            headers: authHeaders(tokens.accessToken),
+                        });
+                        const data = await res.json();
+                        return data.success;
+                    }
+                    return true;
+                } catch {
+                    return false;
+                }
+            },
+
+            updateProfile: async (data) => {
+                const { tokens } = get();
+                if (API_BASE && tokens) {
+                    const res = await fetch(`${API_BASE}/api/auth/profile`, {
+                        method: 'PUT',
+                        headers: authHeaders(tokens.accessToken),
+                        body: JSON.stringify(data),
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        set((state) => ({
+                            user: state.user ? { ...state.user, ...result.data } : null,
+                        }));
+                        return;
+                    }
+                }
+                // Local fallback
                 set((state) => ({
                     user: state.user ? { ...state.user, ...data } : null,
                 }));
             },
 
-            addAddress: (address) => {
+            addAddress: async (address) => {
+                const { tokens } = get();
+                if (API_BASE && tokens) {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/auth/address`, {
+                            method: 'POST',
+                            headers: authHeaders(tokens.accessToken),
+                            body: JSON.stringify(address),
+                        });
+                        const result = await res.json();
+                        if (result.success) {
+                            set((state) => {
+                                if (!state.user) return state;
+                                return {
+                                    user: {
+                                        ...state.user,
+                                        addresses: [...state.user.addresses, result.data],
+                                    },
+                                };
+                            });
+                            return;
+                        }
+                    } catch (e) {
+                        console.error('addAddress error:', e);
+                    }
+                }
+                // Local fallback
                 set((state) => {
                     if (!state.user) return state;
                     return {
@@ -193,7 +248,18 @@ export const useAuthStore = create<AuthState>()(
                 });
             },
 
-            removeAddress: (addressId) => {
+            removeAddress: async (addressId) => {
+                const { tokens } = get();
+                if (API_BASE && tokens) {
+                    try {
+                        await fetch(`${API_BASE}/api/auth/address/${addressId}`, {
+                            method: 'DELETE',
+                            headers: authHeaders(tokens.accessToken),
+                        });
+                    } catch (e) {
+                        console.error('removeAddress error:', e);
+                    }
+                }
                 set((state) => {
                     if (!state.user) return state;
                     return {
@@ -205,33 +271,40 @@ export const useAuthStore = create<AuthState>()(
                 });
             },
 
-            addOrder: (order) => {
-                set((state) => {
-                    if (!state.user) return state;
-                    return {
-                        user: {
-                            ...state.user,
-                            orders: [order, ...state.user.orders],
-                        },
-                    };
-                });
-            },
-
-            updateOrderStatus: (orderId, status) => {
-                set((state) => {
-                    if (!state.user) return state;
-                    return {
-                        user: {
-                            ...state.user,
-                            orders: state.user.orders.map((o) =>
-                                o.id === orderId ? { ...o, orderStatus: status } : o
-                            ),
-                        },
-                    };
-                });
+            fetchMyOrders: async () => {
+                const { tokens } = get();
+                if (API_BASE && tokens) {
+                    try {
+                        const res = await fetch(`${API_BASE}/api/orders/my-orders`, {
+                            headers: authHeaders(tokens.accessToken),
+                        });
+                        const data = await res.json();
+                        if (data.success) {
+                            // Map order items to include product image for display
+                            const orders = data.data.map((order: any) => ({
+                                ...order,
+                                items: order.items.map((item: any) => ({
+                                    ...item,
+                                    product: {
+                                        ...item.product,
+                                        image: item.product?.images?.[0]?.imageUrl || item.product?.image || '',
+                                    },
+                                })),
+                            }));
+                            set((state) => ({
+                                user: state.user ? { ...state.user, orders } : null,
+                            }));
+                            return orders;
+                        }
+                    } catch (e) {
+                        console.error('fetchMyOrders error:', e);
+                    }
+                }
+                return get().user?.orders || [];
             },
 
             setUser: (user) => set({ user, isLoggedIn: true }),
+            clearRegistrationEmail: () => set({ registrationEmail: null }),
         }),
         {
             name: 'clefeel-auth',
